@@ -1,0 +1,8 @@
+*.pyc
+venv/
+*.ppk
+*.openssh
+*.pub
+__pycache__
+passphrase
+*.yaml

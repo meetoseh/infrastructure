@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+export GITHUB_REPOSITORY="{{GITHUB_REPOSITORY}}"
+export GITHUB_USERNAME="{{GITHUB_USERNAME}}"
+export GITHUB_PAT="{{GITHUB_PAT}}"
