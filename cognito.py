@@ -175,7 +175,7 @@ class Cognito:
                 "COGNITO",
                 self.google_identity_provider.provider_name,
             ],
-            name="meetoseh.com",
+            name=tls.domain.removesuffix("."),
         )
         """The user pool client which the frontend redirects to for generating tokens"""
 
