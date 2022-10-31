@@ -3,7 +3,7 @@ a github repository and then can install itself after invoking the
 scripts/auto/after_install.sh from the repository, and the application
 is run via the scripts/auto/start.sh
 """
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pulumi import ResourceOptions
 import pulumi
 import pulumi_aws as aws
@@ -29,10 +29,11 @@ class Webapp:
         github_pat: str,
         bastion: str,
         key: Key,
-        architecture: str = "arm64",
+        architecture: Literal["arm64", "amd64"] = "arm64",
         instance_type: str = "t4g.nano",
         num_subnets: int = 2,
         num_instances_per_subnet: int = 1,
+        bleeding_ami: bool = False,
     ):
         """Creates a new webapp in the first N private subnets of the
         given virtual private cloud.
@@ -58,6 +59,8 @@ class Webapp:
             num_subnets (int): how many subnets to install the application to
             num_instances_per_subnet (int): how many instances of the application to
                 install in each subnet
+            bleeding_ami (bool): True to use the most bleeding edge ami, False to use
+                the latest long term stable ami
 
         """
         self.resource_name: str = resource_name
@@ -81,7 +84,7 @@ class Webapp:
         self.key: Key = key
         """The key that the instances were setup to accept connections from"""
 
-        self.architecture: str = architecture
+        self.architecture: Literal["arm64", "amd64"] = architecture
         """The architecture to use for the instances"""
 
         self.instance_type: str = instance_type
@@ -93,14 +96,34 @@ class Webapp:
         self.num_instances_per_subnet = num_instances_per_subnet
         """How many instances of the application to install in each subnet"""
 
-        self.ami: aws.ec2.Ami = aws.ec2.get_ami(
-            most_recent=True,
-            filters=[
-                aws.ec2.GetAmiFilterArgs(name="name", values=["amzn2-ami-*"]),
-                aws.ec2.GetAmiFilterArgs(name="virtualization-type", values=["hvm"]),
-                aws.ec2.GetAmiFilterArgs(name="architecture", values=[architecture]),
-            ],
-            owners=["137112412989"],
+        self.ami: aws.ec2.Ami = (
+            aws.ec2.get_ami(
+                most_recent=True,
+                filters=[
+                    aws.ec2.GetAmiFilterArgs(name="name", values=["amzn2-ami-*"]),
+                    aws.ec2.GetAmiFilterArgs(
+                        name="virtualization-type", values=["hvm"]
+                    ),
+                    aws.ec2.GetAmiFilterArgs(
+                        name="architecture", values=[architecture]
+                    ),
+                ],
+                owners=["137112412989"],
+            )
+            if not bleeding_ami
+            else aws.ec2.get_ami(
+                most_recent=True,
+                filters=[
+                    aws.ec2.GetAmiFilterArgs(name="name", values=["al2022-ami-20*"]),
+                    aws.ec2.GetAmiFilterArgs(
+                        name="virtualization-type", values=["hvm"]
+                    ),
+                    aws.ec2.GetAmiFilterArgs(
+                        name="architecture", values=[architecture]
+                    ),
+                ],
+                owners=["137112412989"],
+            )
         )
         """The amazon machine id that the instances use"""
 
@@ -136,6 +159,11 @@ class Webapp:
                     tags={
                         "Name": f"{resource_name} {vpc.availability_zones[subnet_idx]}-{instance_idx}"
                     },
+                    opts=pulumi.ResourceOptions(
+                        replace_on_changes=[
+                            "instance_type",
+                        ]
+                    ),
                 )
                 for instance_idx in range(num_instances_per_subnet)
             ]
