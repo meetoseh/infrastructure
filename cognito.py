@@ -21,6 +21,9 @@ class Cognito:
         tls: TransportLayerSecurity,
         google_oidc_client_id: pulumi.Input[str],
         google_oidc_client_secret: pulumi.Input[str],
+        expo_username: pulumi.Input[str],
+        expo_app_slug: pulumi.Input[str],
+        development_expo_urls: pulumi.Input[List[str]],
     ) -> None:
         """Creates the appropriate Amazon Cognito resources.
 
@@ -33,6 +36,16 @@ class Cognito:
                 identity provider
             google_oidc_client_secret (str): The client secret for using google as
                 an identity provider
+            expo_username (str): The username for the React Expo application, which
+                is used for native apps. This is used to allowlist the required
+                callback url for the native app:
+                https://docs.expo.dev/versions/latest/sdk/auth-session/
+            expo_app_slug (str): The slug for the React Expo application
+            development_expo_urls (list[str]): A list of url's that should be allowed
+                as callback urls for cognito in order to support development. This is
+                typically all exp:// endpoints for private IP addresses, and is required
+                since the expo auth middleman doesn't work correctly in some contexts:
+                https://github.com/expo/expo/issues/8957
         """
         self.resource_name: str = resource_name
         """the prefix used for resources created by this instance"""
@@ -49,6 +62,23 @@ class Cognito:
             google_oidc_client_secret
         )
         """the oauth client secret to use google as an identity provider"""
+
+        self.expo_username: pulumi.Output[str] = pulumi.Output.from_input(expo_username)
+        """the username for the React Expo application, which is used for native apps"""
+
+        self.expo_app_slug: pulumi.Output[str] = pulumi.Output.from_input(expo_app_slug)
+        """the slug for the React Expo application"""
+
+        self.development_expo_urls: pulumi.Output[List[str]] = pulumi.Output.from_input(
+            development_expo_urls
+        )
+        """A list of url's that should be allowed as callback urls for cognito in order
+        to support development"""
+
+        self.expo_callback_url: pulumi.Output[str] = pulumi.Output.all(
+            expo_username, expo_app_slug
+        ).apply(lambda args: f"https://auth.expo.io/@{args[0]}/{args[1]}")
+        """the callback url for the React Expo application"""
 
         self.user_pool: aws.cognito.UserPool = aws.cognito.UserPool(
             f"{self.resource_name}-user-pool",
@@ -152,7 +182,11 @@ class Cognito:
             f"{self.resource_name}-user-pool-client",
             user_pool_id=self.user_pool.id,
             generate_secret=False,
-            callback_urls=[domain_with_prefix_and_trailing_slash],
+            callback_urls=pulumi.Output.all(
+                [domain_with_prefix_and_trailing_slash],
+                [self.expo_callback_url],
+                self.development_expo_urls,
+            ).apply(lambda args: sum(args, [])),
             default_redirect_uri=domain_with_prefix_and_trailing_slash,
             enable_token_revocation=True,
             prevent_user_existence_errors="ENABLED",
@@ -288,3 +322,4 @@ class Cognito:
         """The URL to use for the token login"""
 
         pulumi.export(f"{resource_name}-token-login-url", self.token_login_url)
+        pulumi.export(f"{resource_name}-client-id", self.user_pool_client.id)

@@ -7,6 +7,8 @@ import webapp
 import rqlite
 import redis
 import reverse_proxy
+import urllib.parse
+import ipaddress
 from cognito import Cognito
 
 config = pulumi.Config()
@@ -21,6 +23,32 @@ slack_web_errors_url = config.require_secret("slack_web_errors_url")
 slack_ops_url = config.require_secret("slack_ops_url")
 google_oidc_client_id = config.require("google_oidc_client_id")
 google_oidc_client_secret = config.require_secret("google_oidc_client_secret")
+expo_username = config.require("expo_username")
+expo_app_slug = config.require("expo_app_slug")
+development_expo_urls = [
+    u for u in config.get("development_expo_urls", default="").split(",") if u != ""
+]
+
+# it's easy to misuse development_expo_urls, so we make sure it's valid
+for idx, url_str in enumerate(development_expo_urls):
+    url = urllib.parse.urlparse(url_str)
+    assert (
+        url.scheme == "exp"
+    ), f"development_expo_urls[{idx}]: expected {url_str=} scheme to be exp, got {url.scheme=}"
+    assert (
+        url.port == 19000
+    ), f"development_expo_urls[{idx}]: expected {url_str=} port to be 19000, got {url.port=}"
+    try:
+        ip = ipaddress.ip_address(url.hostname)
+    except:
+        assert (
+            False
+        ), f"development_expo_urls[{idx}]: expected {url_str=} hostname to be an IP address, got {url.hostname=}"
+
+    assert (
+        ip.is_private
+    ), f"development_expo_urls[{idx}]: expected {url_str=} hostname to be private, got {url.hostname=}"
+
 
 key = Key("key", "key.pub", "key.openssh")
 
@@ -120,6 +148,9 @@ cognito = Cognito(
     tls=tls,
     google_oidc_client_id=google_oidc_client_id,
     google_oidc_client_secret=google_oidc_client_secret,
+    expo_username=expo_username,
+    expo_app_slug=expo_app_slug,
+    development_expo_urls=development_expo_urls,
 )
 standard_configuration = pulumi.Output.all(
     *[instance.private_ip for instance in main_rqlite.instances],
