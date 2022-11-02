@@ -1,5 +1,6 @@
 from typing import List
 import pulumi
+import pulumi_aws as aws
 import vpc
 from tls import TransportLayerSecurity
 from key import Key
@@ -74,6 +75,7 @@ def make_standard_webapp_configuration(args) -> str:
     public_kid_url: str = remaining[6]
     expected_issuer: str = remaining[7]
     domain: str = remaining[8]
+    s3_bucket_name: str = remaining[9]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -93,10 +95,12 @@ def make_standard_webapp_configuration(args) -> str:
             f'export ROOT_FRONTEND_URL="https://{domain}"',
             f'export ROOT_BACKEND_URL="https://{domain}"',
             f'export ROOT_WEBSOCKET_URL="wss://{domain}"',
+            f'export S3_BUCKET_NAME="{s3_bucket_name}"',
         ]
     )
 
 
+s3_bucket = aws.s3.Bucket("s3_bucket", acl="private", tags={"Name": "oseh"})
 backend_rest = webapp.Webapp(
     "backend_rest",
     main_vpc,
@@ -170,6 +174,7 @@ standard_configuration = pulumi.Output.all(
     cognito.public_kid_url,
     cognito.expected_issuer,
     domain,
+    s3_bucket.bucket,
 ).apply(make_standard_webapp_configuration)
 
 backend_rest.perform_remote_executions(standard_configuration)
