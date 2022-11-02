@@ -95,7 +95,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export ROOT_FRONTEND_URL="https://{domain}"',
             f'export ROOT_BACKEND_URL="https://{domain}"',
             f'export ROOT_WEBSOCKET_URL="wss://{domain}"',
-            f'export S3_BUCKET_NAME="{s3_bucket_name}"',
+            f'export OSEH_S3_BUCKET_NAME="{s3_bucket_name}"',
         ]
     )
 
