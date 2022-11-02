@@ -34,6 +34,7 @@ class Webapp:
         num_subnets: int = 2,
         num_instances_per_subnet: int = 1,
         bleeding_ami: bool = False,
+        webapp_counter: int = 0,
     ):
         """Creates a new webapp in the first N private subnets of the
         given virtual private cloud.
@@ -61,6 +62,8 @@ class Webapp:
                 install in each subnet
             bleeding_ami (bool): True to use the most bleeding edge ami, False to use
                 the latest long term stable ami
+            webapp_counter (int): Doesn't do anything, but changing it will force the
+                instances to be recreated
 
         """
         self.resource_name: str = resource_name
@@ -157,11 +160,13 @@ class Webapp:
                     vpc_security_group_ids=[self.security_group.id],
                     iam_instance_profile=self.vpc.standard_instance_profile.name,
                     tags={
-                        "Name": f"{resource_name} {vpc.availability_zones[subnet_idx]}-{instance_idx}"
+                        "Name": f"{resource_name} {vpc.availability_zones[subnet_idx]}-{instance_idx}",
+                        "Webapp-Counter": str(webapp_counter),
                     },
                     opts=pulumi.ResourceOptions(
                         replace_on_changes=[
                             "instance_type",
+                            "tags",
                         ]
                     ),
                 )

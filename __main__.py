@@ -28,6 +28,8 @@ expo_app_slug = config.require("expo_app_slug")
 development_expo_urls = [
     u for u in config.get("development_expo_urls", default="").split(",") if u != ""
 ]
+webapp_counter = config.get_int("webapp_counter")
+"""the webapp counter doesn't do anything, but changing it will rebuild all the webapps--useful for testing"""
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -103,6 +105,7 @@ backend_rest = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
+    webapp_counter=webapp_counter,
 )
 backend_ws = webapp.Webapp(
     "backend_ws",
@@ -112,6 +115,7 @@ backend_ws = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
+    webapp_counter=webapp_counter,
 )
 frontend = webapp.Webapp(
     "frontend",
@@ -123,6 +127,7 @@ frontend = webapp.Webapp(
     key,
     instance_type="t4g.small",  # node requires 1.2gb ram to build :/
     bleeding_ami=True,  # required for node 18
+    webapp_counter=webapp_counter,
 )
 jobs = webapp.Webapp(
     "jobs",
@@ -132,6 +137,7 @@ jobs = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
+    webapp_counter=webapp_counter,
 )
 main_reverse_proxy = reverse_proxy.ReverseProxy(
     "main_reverse_proxy", main_vpc, key, backend_rest, backend_ws, frontend
@@ -160,7 +166,7 @@ standard_configuration = pulumi.Output.all(
     slack_ops_url,
     cognito.token_login_url,
     cognito.auth_domain,
-    cognito.user_pool_client.name,
+    cognito.user_pool_client.id,
     cognito.public_kid_url,
     cognito.expected_issuer,
     domain,
