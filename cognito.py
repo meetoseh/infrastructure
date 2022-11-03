@@ -185,9 +185,13 @@ class Cognito:
                 },
                 attribute_mapping={
                     "email": "email",
+                    "email_verified": "email_verified",
                     "username": "sub",
                     "name": "name",
                     "picture": "picture",
+                    "phone_number": "phone_number",
+                    "birthdate": "birthdate",
+                    "gender": "gender",
                 },
             )
         )
@@ -220,6 +224,8 @@ class Cognito:
                 "given_name",
                 "family_name",
                 "picture",
+                "birthdate",
+                "gender",
             ],
             supported_identity_providers=[
                 "COGNITO",
