@@ -132,6 +132,16 @@ class Cognito:
                         max_length=32, min_length=5
                     ),
                 ),
+                aws.cognito.UserPoolSchemaArgs(
+                    attribute_data_type="String",
+                    name="picture",
+                    developer_only_attribute=False,
+                    mutable=True,
+                    required=False,
+                    string_attribute_constraints=aws.cognito.UserPoolSchemaStringAttributeConstraintsArgs(
+                        max_length=2048, min_length=6
+                    ),
+                ),
             ],
             alias_attributes=["email"],
             username_configuration=aws.cognito.UserPoolUsernameConfigurationArgs(
@@ -173,7 +183,12 @@ class Cognito:
                     "client_id": self.google_oidc_client_id,
                     "client_secret": self.google_oidc_client_secret,
                 },
-                attribute_mapping={"email": "email", "username": "sub", "name": "name"},
+                attribute_mapping={
+                    "email": "email",
+                    "username": "sub",
+                    "name": "name",
+                    "picture": "picture",
+                },
             )
         )
         """the google identity provider to allow sign in with google"""
@@ -204,6 +219,7 @@ class Cognito:
                 "name",
                 "given_name",
                 "family_name",
+                "picture",
             ],
             supported_identity_providers=[
                 "COGNITO",

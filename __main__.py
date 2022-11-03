@@ -100,7 +100,7 @@ def make_standard_webapp_configuration(args) -> str:
     )
 
 
-s3_bucket = aws.s3.Bucket("s3_bucket", acl="private", tags={"Name": "oseh"})
+bucket = aws.s3.Bucket("bucket", acl="private", tags={"Name": "oseh"})
 backend_rest = webapp.Webapp(
     "backend_rest",
     main_vpc,
@@ -174,7 +174,7 @@ standard_configuration = pulumi.Output.all(
     cognito.public_kid_url,
     cognito.expected_issuer,
     domain,
-    s3_bucket.bucket,
+    bucket.bucket,
 ).apply(make_standard_webapp_configuration)
 
 backend_rest.perform_remote_executions(standard_configuration)
