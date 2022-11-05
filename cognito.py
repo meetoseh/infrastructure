@@ -21,6 +21,10 @@ class Cognito:
         tls: TransportLayerSecurity,
         google_oidc_client_id: pulumi.Input[str],
         google_oidc_client_secret: pulumi.Input[str],
+        apple_app_id_team_id: pulumi.Input[str],
+        apple_services_id: pulumi.Input[str],
+        apple_key_id: pulumi.Input[str],
+        apple_key_file: pulumi.Input[str],
         expo_username: pulumi.Input[str],
         expo_app_slug: pulumi.Input[str],
         development_expo_urls: pulumi.Input[List[str]],
@@ -36,6 +40,17 @@ class Cognito:
                 identity provider
             google_oidc_client_secret (str): The client secret for using google as
                 an identity provider
+            apple_app_id_team_id (str): The app id team id for using apple as an
+                identity provider. This is found under Certificates, Identifers & Profiles
+                -> Identifiers -> App IDs -> App ID -> App ID Prefix
+            apple_services_id (str): The services id for using apple as an
+                identity provider. This is found under Certificates, Identifers & Profiles
+                -> Identifiers -> Services IDs -> Identifier
+            apple_key_id (str): The key id for using apple as an identity provider.
+                This is found under Certificates, Identifers & Profiles -> Keys -> Key Details -> Key ID
+            apple_key_file (str): The path to the key file for using apple as an
+                identity provider. This cannot be found again after creation, but is available
+                as a download when creating the key.
             expo_username (str): The username for the React Expo application, which
                 is used for native apps. This is used to allowlist the required
                 callback url for the native app:
@@ -62,6 +77,24 @@ class Cognito:
             google_oidc_client_secret
         )
         """the oauth client secret to use google as an identity provider"""
+
+        self.apple_app_id_team_id: pulumi.Output[str] = pulumi.Output.from_input(
+            apple_app_id_team_id
+        )
+        """the app id team id to use apple as an identity provider"""
+
+        self.apple_services_id: pulumi.Output[str] = pulumi.Output.from_input(
+            apple_services_id
+        )
+        """the services id to use apple as an identity provider"""
+
+        self.apple_key_id: pulumi.Output[str] = pulumi.Output.from_input(apple_key_id)
+        """the key id to use apple as an identity provider"""
+
+        self.apple_key_file: pulumi.Output[str] = pulumi.Output.from_input(
+            apple_key_file
+        )
+        """the path to the key file to use apple as an identity provider"""
 
         self.expo_username: pulumi.Output[str] = pulumi.Output.from_input(expo_username)
         """the username for the React Expo application, which is used for native apps"""
@@ -117,7 +150,7 @@ class Cognito:
                     name="name",
                     developer_only_attribute=False,
                     mutable=True,
-                    required=True,
+                    required=False,
                     string_attribute_constraints=aws.cognito.UserPoolSchemaStringAttributeConstraintsArgs(
                         max_length=320, min_length=2
                     ),
@@ -150,6 +183,9 @@ class Cognito:
             tags={
                 "Name": f"{self.resource_name}-user-pool",
             },
+            opts=pulumi.ResourceOptions(
+                delete_before_replace=True, replace_on_changes=["schemas"]
+            ),
         )
         """the actual user pool to authenticate users"""
 
@@ -197,6 +233,37 @@ class Cognito:
         )
         """the google identity provider to allow sign in with google"""
 
+        def load_file(file_name: str) -> str:
+            with open(file_name, "r") as f:
+                return f.read()
+
+        self.apple_identity_provider: aws.cognito.IdentityProvider = (
+            aws.cognito.IdentityProvider(
+                f"{resource_name}-apple-identity-provider",
+                user_pool_id=self.user_pool.id,
+                provider_name="SignInWithApple",
+                provider_type="SignInWithApple",
+                provider_details={
+                    "client_id": self.apple_services_id,
+                    "team_id": self.apple_app_id_team_id,
+                    "key_id": self.apple_key_id,
+                    "private_key": self.apple_key_file.apply(load_file),
+                    "authorize_scopes": "email name",
+                },
+                attribute_mapping={
+                    "email": "email",
+                    "email_verified": "email_verified",
+                    "username": "sub",
+                    "name": "name",
+                    "picture": "picture",
+                    "phone_number": "phone_number",
+                    "birthdate": "birthdate",
+                    "gender": "gender",
+                },
+            )
+        )
+        """the apple identity provider to allow sign in with apple"""
+
         self.user_pool_client: aws.cognito.UserPoolClient = aws.cognito.UserPoolClient(
             f"{self.resource_name}-user-pool-client",
             user_pool_id=self.user_pool.id,
@@ -230,6 +297,7 @@ class Cognito:
             supported_identity_providers=[
                 "COGNITO",
                 self.google_identity_provider.provider_name,
+                self.apple_identity_provider.provider_name,
             ],
             name=tls.domain.removesuffix("."),
         )

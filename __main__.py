@@ -31,6 +31,10 @@ development_expo_urls = [
 ]
 webapp_counter = config.get_int("webapp_counter")
 """the webapp counter doesn't do anything, but changing it will rebuild all the webapps--useful for testing"""
+apple_app_id_team_id = config.require("apple_app_id_team_id")
+apple_services_id = config.require("apple_services_id")
+apple_key_id = config.require("apple_key_id")
+apple_key_file = config.require("apple_key_file")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -96,6 +100,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export ROOT_BACKEND_URL="https://{domain}"',
             f'export ROOT_WEBSOCKET_URL="wss://{domain}"',
             f'export OSEH_S3_BUCKET_NAME="{s3_bucket_name}"',
+            f"export ENVIRONMENT=production",
         ]
     )
 
@@ -158,6 +163,10 @@ cognito = Cognito(
     tls=tls,
     google_oidc_client_id=google_oidc_client_id,
     google_oidc_client_secret=google_oidc_client_secret,
+    apple_app_id_team_id=apple_app_id_team_id,
+    apple_services_id=apple_services_id,
+    apple_key_id=apple_key_id,
+    apple_key_file=apple_key_file,
     expo_username=expo_username,
     expo_app_slug=expo_app_slug,
     development_expo_urls=development_expo_urls,
