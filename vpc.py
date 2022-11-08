@@ -238,6 +238,23 @@ class VirtualPrivateCloud:
                     ],
                 }
             ),
+            inline_policies=[
+                aws.iam.RoleInlinePolicyArgs(
+                    name="s3",
+                    policy=json.dumps(
+                        {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": ["s3:*"],
+                                    "Effect": "Allow",
+                                    "Resource": "*",
+                                }
+                            ]
+                        }
+                    )
+                )
+            ],
             tags={
                 "Name": "webapp-iam-role",
             },

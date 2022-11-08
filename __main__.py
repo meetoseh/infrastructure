@@ -101,6 +101,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export ROOT_WEBSOCKET_URL="wss://{domain}"',
             f'export OSEH_S3_BUCKET_NAME="{s3_bucket_name}"',
             f"export ENVIRONMENT=production",
+            f"export AWS_DEFAULT_REGION=us-west-2",
         ]
     )
 
