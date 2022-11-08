@@ -166,6 +166,13 @@ class Cognito:
                     ),
                 ),
                 aws.cognito.UserPoolSchemaArgs(
+                    attribute_data_type="Boolean",
+                    name="custom:pn_verified",  # phone_number_verified is too long
+                    developer_only_attribute=False,
+                    mutable=True,
+                    required=False,
+                ),
+                aws.cognito.UserPoolSchemaArgs(
                     attribute_data_type="String",
                     name="picture",
                     developer_only_attribute=False,
@@ -226,6 +233,7 @@ class Cognito:
                     "name": "name",
                     "picture": "picture",
                     "phone_number": "phone_number",
+                    "custom:pn_verified": "phone_number_verified",
                     "birthdate": "birthdate",
                     "gender": "gender",
                 },
@@ -257,6 +265,7 @@ class Cognito:
                     "name": "name",
                     "picture": "picture",
                     "phone_number": "phone_number",
+                    "custom:pn_verified": "phone_number_verified",
                     "birthdate": "birthdate",
                     "gender": "gender",
                 },
