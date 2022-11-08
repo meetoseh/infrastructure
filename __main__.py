@@ -106,7 +106,9 @@ def make_standard_webapp_configuration(args) -> str:
     )
 
 
-bucket = aws.s3.Bucket("bucket", acl="private", tags={"Name": "oseh"})
+bucket = aws.s3.Bucket(
+    "bucket", acl="private", tags={"Name": "oseh"}, force_destroy=True
+)
 backend_rest = webapp.Webapp(
     "backend_rest",
     main_vpc,
