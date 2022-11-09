@@ -35,6 +35,7 @@ apple_app_id_team_id = config.require("apple_app_id_team_id")
 apple_services_id = config.require("apple_services_id")
 apple_key_id = config.require("apple_key_id")
 apple_key_file = config.require("apple_key_file")
+image_file_jwt_secret = config.require_secret("image_file_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -80,6 +81,7 @@ def make_standard_webapp_configuration(args) -> str:
     expected_issuer: str = remaining[7]
     domain: str = remaining[8]
     s3_bucket_name: str = remaining[9]
+    image_file_jwt_secret: str = remaining[10]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -100,6 +102,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export ROOT_BACKEND_URL="https://{domain}"',
             f'export ROOT_WEBSOCKET_URL="wss://{domain}"',
             f'export OSEH_S3_BUCKET_NAME="{s3_bucket_name}"',
+            f'export OSEH_IMAGE_FILE_JWT_SECRET="{image_file_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -187,6 +190,7 @@ standard_configuration = pulumi.Output.all(
     cognito.expected_issuer,
     domain,
     bucket.bucket,
+    image_file_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 
 backend_rest.perform_remote_executions(standard_configuration)
