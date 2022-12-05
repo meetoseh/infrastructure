@@ -39,6 +39,11 @@ image_file_jwt_secret = config.require_secret("image_file_jwt_secret")
 file_upload_jwt_secret = config.require_secret("file_upload_jwt_secret")
 content_file_jwt_secret = config.require_secret("content_file_jwt_secret")
 journey_jwt_secret = config.require_secret("journey_jwt_secret")
+revenue_cat_secret_key = config.require_secret("revenue_cat_secret_key")
+revenue_cat_stripe_public_key = config.require_secret("revenue_cat_stripe_public_key")
+stripe_secret_key = config.require_secret("stripe_secret_key")
+stripe_public_key = config.require_secret("stripe_public_key")
+stripe_price_id = config.require("stripe_price_id")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -88,6 +93,11 @@ def make_standard_webapp_configuration(args) -> str:
     file_upload_jwt_secret: str = remaining[11]
     content_file_jwt_secret: str = remaining[12]
     journey_jwt_secret: str = remaining[13]
+    revenue_cat_secret_key: str = remaining[14]
+    revenue_cat_stripe_public_key: str = remaining[15]
+    stripe_secret_key: str = remaining[16]
+    stripe_public_key: str = remaining[17]
+    stripe_price_id: str = remaining[18]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -112,6 +122,11 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_FILE_UPLOAD_JWT_SECRET="{file_upload_jwt_secret}"',
             f'export OSEH_CONTENT_FILE_JWT_SECRET="{content_file_jwt_secret}"',
             f'export OSEH_JOURNEY_JWT_SECRET="{journey_jwt_secret}"',
+            f'export OSEH_REVENUE_CAT_SECRET_KEY="{revenue_cat_secret_key}"',
+            f'export OSEH_REVENUE_CAT_STRIPE_PUBLIC_KEY="{revenue_cat_stripe_public_key}"',
+            f'export OSEH_STRIPE_SECRET_KEY="{stripe_secret_key}"',
+            f'export OSEH_STRIPE_PUBLIC_KEY="{stripe_public_key}"',
+            f'export OSEH_STRIPE_PRICE_ID="{stripe_price_id}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -203,6 +218,11 @@ standard_configuration = pulumi.Output.all(
     file_upload_jwt_secret,
     content_file_jwt_secret,
     journey_jwt_secret,
+    revenue_cat_secret_key,
+    revenue_cat_stripe_public_key,
+    stripe_secret_key,
+    stripe_public_key,
+    stripe_price_id,
 ).apply(make_standard_webapp_configuration)
 
 backend_rest.perform_remote_executions(standard_configuration)
