@@ -39,6 +39,7 @@ image_file_jwt_secret = config.require_secret("image_file_jwt_secret")
 file_upload_jwt_secret = config.require_secret("file_upload_jwt_secret")
 content_file_jwt_secret = config.require_secret("content_file_jwt_secret")
 journey_jwt_secret = config.require_secret("journey_jwt_secret")
+daily_event_jwt_secret = config.require_secret("daily_event_jwt_secret")
 revenue_cat_secret_key = config.require_secret("revenue_cat_secret_key")
 revenue_cat_stripe_public_key = config.require_secret("revenue_cat_stripe_public_key")
 stripe_secret_key = config.require_secret("stripe_secret_key")
@@ -93,11 +94,12 @@ def make_standard_webapp_configuration(args) -> str:
     file_upload_jwt_secret: str = remaining[11]
     content_file_jwt_secret: str = remaining[12]
     journey_jwt_secret: str = remaining[13]
-    revenue_cat_secret_key: str = remaining[14]
-    revenue_cat_stripe_public_key: str = remaining[15]
-    stripe_secret_key: str = remaining[16]
-    stripe_public_key: str = remaining[17]
-    stripe_price_id: str = remaining[18]
+    daily_event_jwt_secret: str = remaining[14]
+    revenue_cat_secret_key: str = remaining[15]
+    revenue_cat_stripe_public_key: str = remaining[16]
+    stripe_secret_key: str = remaining[17]
+    stripe_public_key: str = remaining[18]
+    stripe_price_id: str = remaining[19]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -122,6 +124,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_FILE_UPLOAD_JWT_SECRET="{file_upload_jwt_secret}"',
             f'export OSEH_CONTENT_FILE_JWT_SECRET="{content_file_jwt_secret}"',
             f'export OSEH_JOURNEY_JWT_SECRET="{journey_jwt_secret}"',
+            f'export OSEH_DAILY_EVENT_JWT_SECRET="{daily_event_jwt_secret}"',
             f'export OSEH_REVENUE_CAT_SECRET_KEY="{revenue_cat_secret_key}"',
             f'export OSEH_REVENUE_CAT_STRIPE_PUBLIC_KEY="{revenue_cat_stripe_public_key}"',
             f'export OSEH_STRIPE_SECRET_KEY="{stripe_secret_key}"',
@@ -218,6 +221,7 @@ standard_configuration = pulumi.Output.all(
     file_upload_jwt_secret,
     content_file_jwt_secret,
     journey_jwt_secret,
+    daily_event_jwt_secret,
     revenue_cat_secret_key,
     revenue_cat_stripe_public_key,
     stripe_secret_key,
