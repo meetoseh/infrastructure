@@ -233,3 +233,11 @@ backend_rest.perform_remote_executions(standard_configuration)
 backend_ws.perform_remote_executions(standard_configuration)
 frontend.perform_remote_executions(standard_configuration)
 jobs.perform_remote_executions(standard_configuration)
+
+pulumi.export(
+    "example reverse proxy ip", main_reverse_proxy.reverse_proxies[0].private_ip
+)
+pulumi.export("example frontend-web ip", frontend.instances_by_subnet[0][0].private_ip)
+pulumi.export("example backend ip", backend_rest.instances_by_subnet[0][0].private_ip)
+pulumi.export("example websocket ip", backend_ws.instances_by_subnet[0][0].private_ip)
+pulumi.export("example jobs ip", jobs.instances_by_subnet[0][0].private_ip)
