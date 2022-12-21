@@ -241,3 +241,4 @@ pulumi.export("example frontend-web ip", frontend.instances_by_subnet[0][0].priv
 pulumi.export("example backend ip", backend_rest.instances_by_subnet[0][0].private_ip)
 pulumi.export("example websocket ip", backend_ws.instances_by_subnet[0][0].private_ip)
 pulumi.export("example jobs ip", jobs.instances_by_subnet[0][0].private_ip)
+pulumi.export("example rqlite ip", main_rqlite.instances[0].private_ip)
