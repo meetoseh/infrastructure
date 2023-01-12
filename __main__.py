@@ -1,3 +1,4 @@
+import base64
 from typing import List
 import pulumi
 import pulumi_aws as aws
@@ -10,7 +11,12 @@ import redis
 import reverse_proxy
 import urllib.parse
 import ipaddress
-from cognito import Cognito
+import os
+
+if os.environ.get("AWS_PROFILE") is None or "oseh" not in os.environ.get("AWS_PROFILE"):
+    raise Exception(
+        "AWS_PROFILE must be set to an oseh profile to avoid accidentally using wrong AWS account"
+    )
 
 config = pulumi.Config()
 github_username = config.require("github_username")
@@ -40,6 +46,8 @@ file_upload_jwt_secret = config.require_secret("file_upload_jwt_secret")
 content_file_jwt_secret = config.require_secret("content_file_jwt_secret")
 journey_jwt_secret = config.require_secret("journey_jwt_secret")
 daily_event_jwt_secret = config.require_secret("daily_event_jwt_secret")
+id_token_secret = config.require_secret("id_token_secret")
+refresh_token_secret = config.require_secret("refresh_token_secret")
 revenue_cat_secret_key = config.require_secret("revenue_cat_secret_key")
 revenue_cat_stripe_public_key = config.require_secret("revenue_cat_stripe_public_key")
 stripe_secret_key = config.require_secret("stripe_secret_key")
@@ -83,26 +91,33 @@ def make_standard_webapp_configuration(args) -> str:
     deploy_secret: str = remaining[0]
     web_errors_url: str = remaining[1]
     ops_url: str = remaining[2]
-    login_url: str = remaining[3]
-    auth_domain: str = remaining[4]
-    auth_client_id: str = remaining[5]
-    public_kid_url: str = remaining[6]
-    expected_issuer: str = remaining[7]
-    domain: str = remaining[8]
-    s3_bucket_name: str = remaining[9]
-    image_file_jwt_secret: str = remaining[10]
-    file_upload_jwt_secret: str = remaining[11]
-    content_file_jwt_secret: str = remaining[12]
-    journey_jwt_secret: str = remaining[13]
-    daily_event_jwt_secret: str = remaining[14]
-    revenue_cat_secret_key: str = remaining[15]
-    revenue_cat_stripe_public_key: str = remaining[16]
-    stripe_secret_key: str = remaining[17]
-    stripe_public_key: str = remaining[18]
-    stripe_price_id: str = remaining[19]
+    domain: str = remaining[3]
+    s3_bucket_name: str = remaining[4]
+    image_file_jwt_secret: str = remaining[5]
+    file_upload_jwt_secret: str = remaining[6]
+    content_file_jwt_secret: str = remaining[7]
+    journey_jwt_secret: str = remaining[8]
+    daily_event_jwt_secret: str = remaining[9]
+    revenue_cat_secret_key: str = remaining[10]
+    revenue_cat_stripe_public_key: str = remaining[11]
+    stripe_secret_key: str = remaining[12]
+    stripe_public_key: str = remaining[13]
+    stripe_price_id: str = remaining[14]
+    google_client_id: str = remaining[15]
+    google_client_secret: str = remaining[16]
+    apple_client_id: str = remaining[17]
+    apple_key_id: str = remaining[18]
+    apple_key: str = remaining[19]
+    apple_app_id_team_id: str = remaining[20]
+    id_token_secret: str = remaining[21]
+    refresh_token_secret: str = remaining[22]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
+
+    domain_no_trailing_dot = domain.rstrip(".")
+
+    apple_key_base64 = base64.b64encode(apple_key.encode("utf-8")).decode("utf-8")
 
     return "\n".join(
         [
@@ -111,14 +126,9 @@ def make_standard_webapp_configuration(args) -> str:
             f'export DEPLOYMENT_SECRET="{deploy_secret}"',
             f'export SLACK_WEB_ERRORS_URL="{web_errors_url}"',
             f'export SLACK_OPS_URL="{ops_url}"',
-            f'export LOGIN_URL="{login_url}"',
-            f'export AUTH_DOMAIN="{auth_domain}"',
-            f'export AUTH_CLIENT_ID="{auth_client_id}"',
-            f'export PUBLIC_KID_URL="{public_kid_url}"',
-            f'export EXPECTED_ISSUER="{expected_issuer}"',
-            f'export ROOT_FRONTEND_URL="https://{domain}"',
-            f'export ROOT_BACKEND_URL="https://{domain}"',
-            f'export ROOT_WEBSOCKET_URL="wss://{domain}"',
+            f'export ROOT_FRONTEND_URL="https://{domain_no_trailing_dot}"',
+            f'export ROOT_BACKEND_URL="https://{domain_no_trailing_dot}"',
+            f'export ROOT_WEBSOCKET_URL="wss://{domain_no_trailing_dot}"',
             f'export OSEH_S3_BUCKET_NAME="{s3_bucket_name}"',
             f'export OSEH_IMAGE_FILE_JWT_SECRET="{image_file_jwt_secret}"',
             f'export OSEH_FILE_UPLOAD_JWT_SECRET="{file_upload_jwt_secret}"',
@@ -130,6 +140,14 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_STRIPE_SECRET_KEY="{stripe_secret_key}"',
             f'export OSEH_STRIPE_PUBLIC_KEY="{stripe_public_key}"',
             f'export OSEH_STRIPE_PRICE_ID="{stripe_price_id}"',
+            f'export OSEH_GOOGLE_CLIENT_ID="{google_client_id}"',
+            f'export OSEH_GOOGLE_CLIENT_SECRET="{google_client_secret}"',
+            f'export OSEH_APPLE_CLIENT_ID="{apple_client_id}"',
+            f'export OSEH_APPLE_KEY_ID="{apple_key_id}"',
+            f'export OSEH_APPLE_KEY_BASE64="{apple_key_base64}"',
+            f'export OSEH_APPLE_APP_ID_TEAM_ID="{apple_app_id_team_id}"',
+            f'export OSEH_ID_TOKEN_SECRET="{id_token_secret}"',
+            f'export OSEH_REFRESH_TOKEN_SECRET="{refresh_token_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -180,6 +198,7 @@ jobs = webapp.Webapp(
     main_vpc.bastion.public_ip,
     key,
     webapp_counter=webapp_counter,
+    instance_type="t4g.small",  # ffmpeg memory >1.3gb
 )
 main_reverse_proxy = reverse_proxy.ReverseProxy(
     "main_reverse_proxy", main_vpc, key, backend_rest, backend_ws, frontend
@@ -191,30 +210,16 @@ tls = TransportLayerSecurity(
     [subnet.id for subnet in main_vpc.public_subnets],
     [instance.id for instance in main_reverse_proxy.reverse_proxies],
 )
-cognito = Cognito(
-    "cognito",
-    tls=tls,
-    google_oidc_client_id=google_oidc_client_id,
-    google_oidc_client_secret=google_oidc_client_secret,
-    apple_app_id_team_id=apple_app_id_team_id,
-    apple_services_id=apple_services_id,
-    apple_key_id=apple_key_id,
-    apple_key_file=apple_key_file,
-    expo_username=expo_username,
-    expo_app_slug=expo_app_slug,
-    development_expo_urls=development_expo_urls,
-)
+
+with open(apple_key_file, "r") as f:
+    apple_private_key = f.read()
+
 standard_configuration = pulumi.Output.all(
     *[instance.private_ip for instance in main_rqlite.instances],
     *[instance.private_ip for instance in main_redis.instances],
     deployment_secret,
     slack_web_errors_url,
     slack_ops_url,
-    cognito.token_login_url,
-    cognito.auth_domain,
-    cognito.user_pool_client.id,
-    cognito.public_kid_url,
-    cognito.expected_issuer,
     domain,
     bucket.bucket,
     image_file_jwt_secret,
@@ -227,6 +232,14 @@ standard_configuration = pulumi.Output.all(
     stripe_secret_key,
     stripe_public_key,
     stripe_price_id,
+    google_oidc_client_id,
+    google_oidc_client_secret,
+    apple_services_id,
+    apple_key_id,
+    apple_private_key,
+    apple_app_id_team_id,
+    id_token_secret,
+    refresh_token_secret,
 ).apply(make_standard_webapp_configuration)
 
 backend_rest.perform_remote_executions(standard_configuration)
