@@ -1,5 +1,5 @@
 """This module allows creating a redis cluster (using redis sentinel)"""
-from typing import List
+from typing import List, Optional
 from remote_executor import RemoteExecution, RemoteExecutionInputs
 from vpc import VirtualPrivateCloud
 import pulumi_aws as aws
@@ -13,6 +13,7 @@ class RedisCluster:
         self,
         resource_name: str,
         vpc: VirtualPrivateCloud,
+        allow_maintenance_subnet_idx: Optional[int] = None,
     ) -> None:
         """Creates a new rqlite cluster running on the private subnets
         of the given virtual private cloud.
@@ -22,6 +23,13 @@ class RedisCluster:
                 created by this instance
             vpc (VirtualPrivateCloud): the virtual private cloud to construct
                 the rqlite cluster within
+            allow_maintenance_subnet_id (int): the subnet id to allow maintenance
+                on. On other instances we will ignore standard maintenance for
+                replacing the instance, e.g., ami. If None, no maintenance will
+                be allowed. Typically this should be set to 0, the first subnet -
+                and when we detect maintenance (a diff on ami, for example), it
+                should be cycled one at a time through the subnets until all are
+                updated, before returning to 1
         """
         self.resource_name: str = resource_name
         """the resource name prefix to use for resources created by this instance"""
@@ -77,6 +85,11 @@ class RedisCluster:
                     iops=3000, throughput=125, volume_size=4, volume_type="gp3"
                 ),
                 tags={"Name": f"{resource_name} {vpc.availability_zones[idx]} [{idx}]"},
+                opts=pulumi.ResourceOptions(
+                    ignore_changes=(
+                        ["ami"] if allow_maintenance_subnet_idx != idx else []
+                    ),
+                ),
             )
             for idx, subnet in enumerate(self.vpc.private_subnets)
         ]
@@ -121,5 +134,6 @@ class RedisCluster:
                         bastion=self.vpc.bastion.public_ip,
                         shared_script_name="setup-scripts/shared",
                     ),
+                    opts=pulumi.ResourceOptions(ignore_changes=["bastion"]),
                 )
             )

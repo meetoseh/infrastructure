@@ -1,5 +1,5 @@
 """This module allows creating a rqlite cluster"""
-from typing import List
+from typing import List, Optional
 from remote_executor import RemoteExecution, RemoteExecutionInputs
 from vpc import VirtualPrivateCloud
 import pulumi_aws as aws
@@ -14,6 +14,7 @@ class RqliteCluster:
         resource_name: str,
         vpc: VirtualPrivateCloud,
         id_offset: int = 0,
+        allow_maintenance_subnet_idx: Optional[int] = None,
     ) -> None:
         """Creates a new rqlite cluster running on the private subnets
         of the given virtual private cloud.
@@ -27,6 +28,13 @@ class RqliteCluster:
                 of this cluster and should no longer be. for example, if you want
                 to cleanly update the cluster seamlessly, simply increment this by
                 one, up, and repeat until all instances are replaced
+            allow_maintenance_subnet_id (int, None): the subnet id to allow maintenance
+                on. On other instances we will ignore standard maintenance for
+                replacing the instance, e.g., ami. If None, no maintenance will
+                be allowed. Typically this should be set to 0, the first subnet -
+                and when we detect maintenance (a diff on ami, for example), it
+                should be cycled one at a time through the subnets until all are
+                updated, before returning to 1
         """
         self.resource_name: str = resource_name
         """the resource name prefix to use for resources created by this instance"""
@@ -91,6 +99,14 @@ class RqliteCluster:
                 tags={
                     "Name": f"{resource_name} {vpc.availability_zones[cluster_id % len(self.vpc.private_subnets)]} [{cluster_id}]"
                 },
+                opts=pulumi.ResourceOptions(
+                    ignore_changes=(
+                        ["ami"]
+                        if allow_maintenance_subnet_idx
+                        != (cluster_id % len(self.vpc.private_subnets))
+                        else []
+                    ),
+                ),
             )
             for cluster_id in self.instance_cluster_ids
         ]
@@ -136,6 +152,7 @@ class RqliteCluster:
                         bastion=self.vpc.bastion.public_ip,
                         shared_script_name="setup-scripts/shared",
                     ),
+                    opts=pulumi.ResourceOptions(ignore_changes=["bastion"]),
                 )
             )
 

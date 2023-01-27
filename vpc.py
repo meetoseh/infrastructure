@@ -250,9 +250,9 @@ class VirtualPrivateCloud:
                                     "Effect": "Allow",
                                     "Resource": "*",
                                 }
-                            ]
+                            ],
                         }
-                    )
+                    ),
                 )
             ],
             tags={
@@ -280,4 +280,14 @@ class VirtualPrivateCloud:
         )
         """The bastion server which can connect to the instances"""
 
+        pulumi.export(
+            f"{resource_name}-amazon-linux-arm64-ami", self.amazon_linux_arm64.id
+        )
+        pulumi.export(
+            f"{resource_name}-amazon-linux-amd64-ami", self.amazon_linux_amd64.id
+        )
+        pulumi.export(
+            f"{resource_name}-bleeding-edge-arm64-ami",
+            self.amazon_linux_bleeding_arm64.id,
+        )
         pulumi.export(f"{resource_name} bastion", self.bastion.public_ip)

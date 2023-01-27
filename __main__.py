@@ -78,8 +78,13 @@ for idx, url_str in enumerate(development_expo_urls):
 key = Key("key", "key.pub", "key.openssh")
 
 main_vpc = vpc.VirtualPrivateCloud("main_vpc", key)
-main_rqlite = rqlite.RqliteCluster("main_rqlite", main_vpc, id_offset=rqlite_id_offset)
-main_redis = redis.RedisCluster("main_redis", main_vpc)
+main_rqlite = rqlite.RqliteCluster(
+    "main_rqlite",
+    main_vpc,
+    id_offset=rqlite_id_offset,
+    allow_maintenance_subnet_idx=0,
+)
+main_redis = redis.RedisCluster("main_redis", main_vpc, allow_maintenance_subnet_idx=0)
 
 
 def make_standard_webapp_configuration(args) -> str:
@@ -154,6 +159,16 @@ def make_standard_webapp_configuration(args) -> str:
     )
 
 
+def make_low_resource_jobs_configuration(args) -> str:
+    standard_configuration = args[0]
+    return "\n".join([standard_configuration, "export OSEH_JOB_CATEGORIES=2"])
+
+
+def make_high_resource_jobs_configuration(args) -> str:
+    standard_configuration = args[0]
+    return "\n".join([standard_configuration, "export OSEH_JOB_CATEGORIES=1,2"])
+
+
 bucket = aws.s3.Bucket(
     "bucket", acl="private", tags={"Name": "oseh"}, force_destroy=True
 )
@@ -189,8 +204,8 @@ frontend = webapp.Webapp(
     bleeding_ami=True,  # required for node 18
     webapp_counter=webapp_counter,
 )
-jobs = webapp.Webapp(
-    "jobs",
+high_resource_jobs = webapp.Webapp(
+    "high_resource_jobs",
     main_vpc,
     "meetoseh/jobs",
     github_username,
@@ -198,7 +213,18 @@ jobs = webapp.Webapp(
     main_vpc.bastion.public_ip,
     key,
     webapp_counter=webapp_counter,
-    instance_type="t4g.small",  # ffmpeg memory >1.3gb
+    instance_type="t4g.small",  # ffmpeg memory >1.3gb to install
+)
+low_resource_jobs = webapp.Webapp(
+    "low_resource_jobs",
+    main_vpc,
+    "meetoseh/jobs",
+    github_username,
+    github_pat,
+    main_vpc.bastion.public_ip,
+    key,
+    webapp_counter=webapp_counter,
+    instance_type="t4g.small",  # ffmpeg memory >1.3gb to install
 )
 main_reverse_proxy = reverse_proxy.ReverseProxy(
     "main_reverse_proxy", main_vpc, key, backend_rest, backend_ws, frontend
@@ -241,11 +267,18 @@ standard_configuration = pulumi.Output.all(
     id_token_secret,
     refresh_token_secret,
 ).apply(make_standard_webapp_configuration)
+high_resource_config = pulumi.Output.all(standard_configuration).apply(
+    make_high_resource_jobs_configuration
+)
+low_resource_config = pulumi.Output.all(standard_configuration).apply(
+    make_low_resource_jobs_configuration
+)
 
 backend_rest.perform_remote_executions(standard_configuration)
 backend_ws.perform_remote_executions(standard_configuration)
 frontend.perform_remote_executions(standard_configuration)
-jobs.perform_remote_executions(standard_configuration)
+high_resource_jobs.perform_remote_executions(high_resource_config)
+low_resource_jobs.perform_remote_executions(low_resource_config)
 
 pulumi.export(
     "example reverse proxy ip", main_reverse_proxy.reverse_proxies[0].private_ip
@@ -253,5 +286,12 @@ pulumi.export(
 pulumi.export("example frontend-web ip", frontend.instances_by_subnet[0][0].private_ip)
 pulumi.export("example backend ip", backend_rest.instances_by_subnet[0][0].private_ip)
 pulumi.export("example websocket ip", backend_ws.instances_by_subnet[0][0].private_ip)
-pulumi.export("example jobs ip", jobs.instances_by_subnet[0][0].private_ip)
+pulumi.export(
+    "example low resource jobs ip",
+    low_resource_jobs.instances_by_subnet[0][0].private_ip,
+)
+pulumi.export(
+    "example high resource jobs ip",
+    high_resource_jobs.instances_by_subnet[0][0].private_ip,
+)
 pulumi.export("example rqlite ip", main_rqlite.instances[0].private_ip)

@@ -19,6 +19,7 @@ configure_redis() {
         sleep 1
     done
 
+    systemctl stop redis
     systemctl stop redis-sentinel
 
     mkdir -p /etc/redis

@@ -367,6 +367,11 @@ class RemoteExecution(pulumi.dynamic.Resource):
         props: RemoteExecutionInputs,
         opts: Optional[pulumi.ResourceOptions] = None,
     ):
+        if opts is None:
+            opts = pulumi.ResourceOptions()
+        if opts.delete_before_replace is None:
+            opts.delete_before_replace = True
+
         super().__init__(
             RemoteExecutionProvider(),
             name,
