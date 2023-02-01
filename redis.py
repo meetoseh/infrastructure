@@ -14,6 +14,8 @@ class RedisCluster:
         resource_name: str,
         vpc: VirtualPrivateCloud,
         allow_maintenance_subnet_idx: Optional[int] = None,
+        maintenance_counter: Optional[int] = None,
+        main_ip: Optional[str] = None,
     ) -> None:
         """Creates a new rqlite cluster running on the private subnets
         of the given virtual private cloud.
@@ -30,6 +32,14 @@ class RedisCluster:
                 and when we detect maintenance (a diff on ami, for example), it
                 should be cycled one at a time through the subnets until all are
                 updated, before returning to 1
+            maintenance_counter (int, None): If specified, added as a tag to the
+                instances, forcing them to be recreated if maintenance is enabled.
+                Helpful when testing maintenance.
+            main_ip (str, None): If specified, the IP address of the main redis
+                instance right now. Should be used whenever replacing an instance
+                using allow_maintenance_subnet_id, otherwise we will get split
+                head syndrome. Should never replace the main instance directly;
+                always force a failover first.
         """
         self.resource_name: str = resource_name
         """the resource name prefix to use for resources created by this instance"""
@@ -84,10 +94,22 @@ class RedisCluster:
                 root_block_device=aws.ec2.InstanceRootBlockDeviceArgs(
                     iops=3000, throughput=125, volume_size=4, volume_type="gp3"
                 ),
-                tags={"Name": f"{resource_name} {vpc.availability_zones[idx]} [{idx}]"},
+                tags={
+                    "Name": f"{resource_name} {vpc.availability_zones[idx]} [{idx}]",
+                    **(
+                        dict()
+                        if maintenance_counter is None
+                        else {"maintenance": str(maintenance_counter)}
+                    ),
+                },
                 opts=pulumi.ResourceOptions(
                     ignore_changes=(
-                        ["ami"] if allow_maintenance_subnet_idx != idx else []
+                        ["ami", "instance_type", "tags"]
+                        if allow_maintenance_subnet_idx != idx
+                        else []
+                    ),
+                    replace_on_changes=(
+                        [] if allow_maintenance_subnet_idx != idx else ["tags"]
                     ),
                 ),
             )
@@ -101,10 +123,10 @@ class RedisCluster:
         for idx_outer, instance in enumerate(self.instances):
 
             def generate_file_substitutions(args):
-                idx: int = args[-1]
-                instance_ips: List[str] = args[:-1]
+                main_ip = args[-1]
+                idx: int = args[-2]
+                instance_ips: List[str] = args[:-2]
                 my_ip = instance_ips[idx]
-                main_ip = instance_ips[0]
                 quorum = (len(self.instances) // 2) + 1
 
                 return {
@@ -127,13 +149,30 @@ class RedisCluster:
                     props=RemoteExecutionInputs(
                         script_name="setup-scripts/redis",
                         file_substitutions=pulumi.Output.all(
-                            *[i.private_ip for i in self.instances], idx_outer
+                            *[i.private_ip for i in self.instances],
+                            idx_outer,
+                            main_ip
+                            if main_ip is not None
+                            else self.instances[0].private_ip,
                         ).apply(generate_file_substitutions),
                         host=instance.private_ip,
                         private_key=self.vpc.key.private_key_path,
                         bastion=self.vpc.bastion.public_ip,
                         shared_script_name="setup-scripts/shared",
                     ),
-                    opts=pulumi.ResourceOptions(ignore_changes=["bastion"]),
+                    opts=pulumi.ResourceOptions(
+                        ignore_changes=[
+                            "bastion",
+                            *(
+                                [
+                                    "file_substitutions",
+                                    "script_name",
+                                    "shared_script_name",
+                                ]
+                                if allow_maintenance_subnet_idx != idx_outer
+                                else []
+                            ),
+                        ]
+                    ),
                 )
             )

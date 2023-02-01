@@ -78,13 +78,47 @@ for idx, url_str in enumerate(development_expo_urls):
 key = Key("key", "key.pub", "key.openssh")
 
 main_vpc = vpc.VirtualPrivateCloud("main_vpc", key)
+
+# There are two options for rqlite updates; either we can have rqlite recover
+# from a node losing all its data, or we can have rqlite add a node and reap a
+# node. Note that reaping a node is a very delicate process and this script does
+# not reliably have it occur, so it's better to just have rqlite recover from
+# one node losing all its data. To do this, keep rqlite_id_offset the same and go
+# through the increment maintenance subnet idx until all nodes are replaced. Allow
+# enough time for the node to recover before moving onto the next node
 main_rqlite = rqlite.RqliteCluster(
     "main_rqlite",
     main_vpc,
     id_offset=rqlite_id_offset,
     allow_maintenance_subnet_idx=0,
 )
-main_redis = redis.RedisCluster("main_redis", main_vpc, allow_maintenance_subnet_idx=0)
+
+# There is only one option for redis; add/remove a node. THIS DOES NOT WORK ON
+# THE MASTER INSTANCE. You must first identify the master instance (info
+# replication), update this to specify the new master, then replace the
+# instance. When you get to the point you need to replace the current master,
+# force a failover first.
+#
+# VERY IMPORTANT: After replacing an instance, the old sentinels will not be
+# reaped automatically. To reap them run `sentinel reset <master_name>` ON EACH
+# INSTANCE. This command is dangerous; it will temporarily cause the cluster to
+# be unavailable as all the sentinels forget about everyone, and is prone to
+# split-head syndrome if there aren't exactly the correct number of sentinels
+# alive. However, it's the only way to reap sentinels AFAIK, and failing to reap
+# sentinels will eventually make the cluster unresponsive. The sentinels should
+# detect each other within 3s otherwise something went wrong
+#
+# this can be used for monitoring the state of the cluster; note you aren't expecting
+# anything to be sent. make sure you're not on the instance being replaced:
+# save
+# subscribe +reset-master +slave +failover-state-reconf-slaves +failover-detected +slave-reconf-sent +slave-reconf-inprog +slave-reconf-done +dup-sentinel -dup-sentinel +sentinel +sdown -sdown +odown -odown +new-epoch +try-failover +elected-leader +failover-state-select-slave no-good-slave selected-slave failover-state-send-slaveof-noone failover-end-for-timeout failover-end switch-master +tilt -tilt
+main_redis = redis.RedisCluster(
+    "main_redis",
+    main_vpc,
+    allow_maintenance_subnet_idx=2,
+    maintenance_counter=1,
+    main_ip="10.0.4.222",
+)
 
 
 def make_standard_webapp_configuration(args) -> str:
@@ -212,8 +246,9 @@ high_resource_jobs = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter,
-    instance_type="t4g.small",  # ffmpeg memory >1.3gb to install
+    webapp_counter=webapp_counter + 4,
+    instance_type="m6g.large",  # >= 3gb for video processing
+    bleeding_ami=True,  # required for pympanim
 )
 low_resource_jobs = webapp.Webapp(
     "low_resource_jobs",
@@ -223,8 +258,9 @@ low_resource_jobs = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter,
+    webapp_counter=webapp_counter + 4,
     instance_type="t4g.small",  # ffmpeg memory >1.3gb to install
+    bleeding_ami=True,  # required for pympanim
 )
 main_reverse_proxy = reverse_proxy.ReverseProxy(
     "main_reverse_proxy", main_vpc, key, backend_rest, backend_ws, frontend
@@ -295,3 +331,6 @@ pulumi.export(
     high_resource_jobs.instances_by_subnet[0][0].private_ip,
 )
 pulumi.export("example rqlite ip", main_rqlite.instances[0].private_ip)
+pulumi.export("redis ip 0", main_redis.instances[0].private_ip)
+pulumi.export("redis ip 1", main_redis.instances[1].private_ip)
+pulumi.export("redis ip 2", main_redis.instances[2].private_ip)

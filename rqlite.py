@@ -101,7 +101,7 @@ class RqliteCluster:
                 },
                 opts=pulumi.ResourceOptions(
                     ignore_changes=(
-                        ["ami"]
+                        ["ami", "instance_type", "tags"]
                         if allow_maintenance_subnet_idx
                         != (cluster_id % len(self.vpc.private_subnets))
                         else []
@@ -118,14 +118,14 @@ class RqliteCluster:
         """
 
         self.remote_executions: List[RemoteExecution] = []
-        for cluster_id_outer, instance in zip(
-            self.instance_cluster_ids, self.instances
+        for instance_idx, cluster_id_outer, instance in zip(
+            range(len(self.instances)), self.instance_cluster_ids, self.instances
         ):
 
             def generate_file_substitutions(args):
-                cluster_id: int = args[-1]
-                instance_ips: List[str] = args[:-1]
-                idx = self.instance_cluster_ids.index(cluster_id)
+                idx = args[-1]
+                cluster_id: int = args[-2]
+                instance_ips: List[str] = args[:-2]
                 my_ip = instance_ips[idx]
 
                 return {
@@ -145,14 +145,30 @@ class RqliteCluster:
                     props=RemoteExecutionInputs(
                         script_name="setup-scripts/rqlite",
                         file_substitutions=pulumi.Output.all(
-                            *[i.private_ip for i in self.instances], cluster_id_outer
+                            *[i.private_ip for i in self.instances],
+                            cluster_id_outer,
+                            instance_idx,
                         ).apply(generate_file_substitutions),
                         host=instance.private_ip,
                         private_key=self.vpc.key.private_key_path,
                         bastion=self.vpc.bastion.public_ip,
                         shared_script_name="setup-scripts/shared",
                     ),
-                    opts=pulumi.ResourceOptions(ignore_changes=["bastion"]),
+                    opts=pulumi.ResourceOptions(
+                        ignore_changes=[
+                            "bastion",
+                            *(
+                                [
+                                    "file_substitutions",
+                                    "script_name",
+                                    "shared_script_name",
+                                ]
+                                if allow_maintenance_subnet_idx
+                                != (instance_idx % len(self.vpc.private_subnets))
+                                else []
+                            ),
+                        ]
+                    ),
                 )
             )
 
