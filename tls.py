@@ -183,7 +183,42 @@ class TransportLayerSecurity:
                 )
             ],
         )
-        """Forwards HTTPS traffic to the target group"""
+        """Forwards HTTPS traffic to the target group by default"""
+
+        self.lb_tls_redirect_www_to_non_www_rule: aws.alb.ListenerRule = (
+            aws.alb.ListenerRule(
+                f"{resource_name}-lb_tls_redirect_www_to_non_www_rule",
+                listener_arn=self.lb_tls_listener.arn,
+                priority=100,
+                actions=[
+                    aws.alb.ListenerRuleActionArgs(
+                        type="redirect",
+                        redirect=aws.alb.ListenerRuleActionRedirectArgs(
+                            host=pulumi.Output.from_input(domain).apply(
+                                lambda d: d.rstrip(".")
+                            ),
+                            path="/#{path}",
+                            query="#{query}",
+                            port="443",
+                            protocol="HTTPS",
+                            status_code="HTTP_301",
+                        ),
+                    )
+                ],
+                conditions=[
+                    aws.lb.ListenerRuleConditionArgs(
+                        host_header=aws.lb.ListenerRuleConditionHostHeaderArgs(
+                            values=[
+                                pulumi.Output.from_input(domain).apply(
+                                    lambda d: f"www.{d.rstrip('.')}"
+                                )
+                            ]
+                        )
+                    )
+                ],
+            )
+        )
+        """Redirects www to non-www on the secure endpoint"""
 
         self.lb_unsecure_listener: aws.alb.Listener = aws.alb.Listener(
             f"{resource_name}-alb-unsecure-listener",
