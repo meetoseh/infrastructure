@@ -53,6 +53,11 @@ revenue_cat_stripe_public_key = config.require_secret("revenue_cat_stripe_public
 stripe_secret_key = config.require_secret("stripe_secret_key")
 stripe_public_key = config.require_secret("stripe_public_key")
 stripe_price_id = config.require("stripe_price_id")
+twilio_account_sid = config.require("twilio_account_sid")
+twilio_auth_token = config.require_secret("twilio_auth_token")
+twilio_phone_number = config.require("twilio_phone_number")
+twilio_verify_service_sid = config.require("twilio_verify_service_sid")
+twilio_message_service_sid = config.require("twilio_message_service_sid")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -90,7 +95,6 @@ main_rqlite = rqlite.RqliteCluster(
     "main_rqlite",
     main_vpc,
     id_offset=rqlite_id_offset,
-    allow_maintenance_subnet_idx=0,
 )
 
 # There is only one option for redis; add/remove a node. THIS DOES NOT WORK ON
@@ -115,9 +119,6 @@ main_rqlite = rqlite.RqliteCluster(
 main_redis = redis.RedisCluster(
     "main_redis",
     main_vpc,
-    allow_maintenance_subnet_idx=2,
-    maintenance_counter=1,
-    main_ip="10.0.4.222",
 )
 
 
@@ -150,6 +151,11 @@ def make_standard_webapp_configuration(args) -> str:
     apple_app_id_team_id: str = remaining[20]
     id_token_secret: str = remaining[21]
     refresh_token_secret: str = remaining[22]
+    twilio_account_sid: str = remaining[23]
+    twilio_auth_token: str = remaining[24]
+    twilio_phone_number: str = remaining[25]
+    twilio_verify_service_sid: str = remaining[26]
+    twilio_message_service_sid: str = remaining[27]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -187,6 +193,11 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_APPLE_APP_ID_TEAM_ID="{apple_app_id_team_id}"',
             f'export OSEH_ID_TOKEN_SECRET="{id_token_secret}"',
             f'export OSEH_REFRESH_TOKEN_SECRET="{refresh_token_secret}"',
+            f'export OSEH_TWILIO_ACCOUNT_SID="{twilio_account_sid}"',
+            f'export OSEH_TWILIO_AUTH_TOKEN="{twilio_auth_token}"',
+            f'export OSEH_TWILIO_PHONE_NUMBER="{twilio_phone_number}"',
+            f'export OSEH_TWILIO_VERIFY_SERVICE_SID="{twilio_verify_service_sid}"',
+            f'export OSEH_TWILIO_MESSAGE_SERVICE_SID="{twilio_message_service_sid}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -246,7 +257,7 @@ high_resource_jobs = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter + 4,
+    webapp_counter=webapp_counter,
     instance_type="m6g.large",  # >= 3gb for video processing
     bleeding_ami=True,  # required for pympanim
 )
@@ -258,7 +269,7 @@ low_resource_jobs = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter + 4,
+    webapp_counter=webapp_counter,
     instance_type="t4g.small",  # ffmpeg memory >1.3gb to install
     bleeding_ami=True,  # required for pympanim
 )
@@ -302,6 +313,11 @@ standard_configuration = pulumi.Output.all(
     apple_app_id_team_id,
     id_token_secret,
     refresh_token_secret,
+    twilio_account_sid,
+    twilio_auth_token,
+    twilio_phone_number,
+    twilio_verify_service_sid,
+    twilio_message_service_sid,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
