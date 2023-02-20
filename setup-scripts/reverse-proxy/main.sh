@@ -2,6 +2,11 @@
 bash shared/wait_boot_finished.sh
 echo "Reverse proxy install started!"
 
+if [ -f /home/ec2-user/reboot_nginx.sh ]
+then
+    bash cleanup_correctly.sh
+fi
+
 # install nginx
 mv nginx.repo /etc/yum.repos.d/nginx.repo
 chmod +x reboot_nginx.sh
