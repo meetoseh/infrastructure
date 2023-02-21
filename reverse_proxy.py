@@ -87,7 +87,7 @@ class ReverseProxy:
             aws.ec2.Instance(
                 f"{resource_name}-reverse-proxy-{idx}",
                 ami=self.vpc.amazon_linux_arm64.id,
-                instance_type="t4g.nano",
+                instance_type="t4g.small",
                 associate_public_ip_address=False,
                 subnet_id=subnet.id,
                 vpc_security_group_ids=[self.reverse_proxy_security_group.id],

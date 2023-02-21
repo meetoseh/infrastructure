@@ -16,5 +16,9 @@ do
     sleep 1
 done
 
+echo "Clearing out logs"
+echo "" > /home/ec2-user/logs/access.log
+echo "" > /home/ec2-user/logs/error.log
+
 echo "Rebooting nginx"
 nginx

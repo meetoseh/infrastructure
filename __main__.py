@@ -231,6 +231,7 @@ backend_rest = webapp.Webapp(
     main_vpc.bastion.public_ip,
     key,
     webapp_counter=webapp_counter,
+    instance_type="t4g.small",  # i think it's running out of memory on the nano occassionally
 )
 backend_ws = webapp.Webapp(
     "backend_ws",
