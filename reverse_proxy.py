@@ -93,7 +93,14 @@ class ReverseProxy:
                 vpc_security_group_ids=[self.reverse_proxy_security_group.id],
                 key_name=self.vpc.key.key_pair.key_name,
                 iam_instance_profile=self.vpc.standard_instance_profile.name,
-                tags={"Name": f"{resource_name} reverse proxy {idx}"},
+                root_block_device=aws.ec2.InstanceRootBlockDeviceArgs(
+                    volume_size=16,
+                    volume_type="gp3",
+                ),
+                tags={"Name": f"{resource_name} reverse proxy: {idx}"},
+                opts=pulumi.ResourceOptions(
+                    replace_on_changes=(["tags"]),
+                ),
             )
             for idx, subnet in enumerate(self.vpc.private_subnets[:2])
         ]
