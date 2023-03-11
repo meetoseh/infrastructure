@@ -47,6 +47,7 @@ file_upload_jwt_secret = config.require_secret("file_upload_jwt_secret")
 content_file_jwt_secret = config.require_secret("content_file_jwt_secret")
 journey_jwt_secret = config.require_secret("journey_jwt_secret")
 daily_event_jwt_secret = config.require_secret("daily_event_jwt_secret")
+interactive_prompt_jwt_secret = config.require_secret("interactive_prompt_jwt_secret")
 id_token_secret = config.require_secret("id_token_secret")
 refresh_token_secret = config.require_secret("refresh_token_secret")
 revenue_cat_secret_key = config.require_secret("revenue_cat_secret_key")
@@ -94,11 +95,7 @@ main_vpc = vpc.VirtualPrivateCloud("main_vpc", key)
 # one node losing all its data. To do this, keep rqlite_id_offset the same and go
 # through the increment maintenance subnet idx until all nodes are replaced. Allow
 # enough time for the node to recover before moving onto the next node
-main_rqlite = rqlite.RqliteCluster(
-    "main_rqlite",
-    main_vpc,
-    id_offset=rqlite_id_offset,
-)
+main_rqlite = rqlite.RqliteCluster("main_rqlite", main_vpc, id_offset=rqlite_id_offset)
 
 # There is only one option for redis; add/remove a node. THIS DOES NOT WORK ON
 # THE MASTER INSTANCE. You must first identify the master instance (info
@@ -119,10 +116,7 @@ main_rqlite = rqlite.RqliteCluster(
 # anything to be sent. make sure you're not on the instance being replaced:
 # save
 # subscribe +reset-master +slave +failover-state-reconf-slaves +failover-detected +slave-reconf-sent +slave-reconf-inprog +slave-reconf-done +dup-sentinel -dup-sentinel +sentinel +sdown -sdown +odown -odown +new-epoch +try-failover +elected-leader +failover-state-select-slave no-good-slave selected-slave failover-state-send-slaveof-noone failover-end-for-timeout failover-end switch-master +tilt -tilt
-main_redis = redis.RedisCluster(
-    "main_redis",
-    main_vpc,
-)
+main_redis = redis.RedisCluster("main_redis", main_vpc)
 
 
 def make_standard_webapp_configuration(args) -> str:
@@ -160,6 +154,7 @@ def make_standard_webapp_configuration(args) -> str:
     twilio_verify_service_sid: str = remaining[26]
     twilio_message_service_sid: str = remaining[27]
     slack_oseh_bot_url: str = remaining[28]
+    interactive_prompt_jwt_secret: str = remaining[29]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -184,6 +179,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_CONTENT_FILE_JWT_SECRET="{content_file_jwt_secret}"',
             f'export OSEH_JOURNEY_JWT_SECRET="{journey_jwt_secret}"',
             f'export OSEH_DAILY_EVENT_JWT_SECRET="{daily_event_jwt_secret}"',
+            f'export OSEH_INTERACTIVE_PROMPT_JWT_SECRET="{interactive_prompt_jwt_secret}"',
             f'export OSEH_REVENUE_CAT_SECRET_KEY="{revenue_cat_secret_key}"',
             f'export OSEH_REVENUE_CAT_STRIPE_PUBLIC_KEY="{revenue_cat_stripe_public_key}"',
             f'export OSEH_STRIPE_SECRET_KEY="{stripe_secret_key}"',
@@ -325,6 +321,7 @@ standard_configuration = pulumi.Output.all(
     twilio_verify_service_sid,
     twilio_message_service_sid,
     slack_oseh_bot_url,
+    interactive_prompt_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
