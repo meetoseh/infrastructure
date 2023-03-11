@@ -61,7 +61,6 @@ twilio_phone_number = config.require("twilio_phone_number")
 twilio_verify_service_sid = config.require("twilio_verify_service_sid")
 twilio_message_service_sid = config.require("twilio_message_service_sid")
 klaviyo_api_key = config.require_secret("klaviyo_api_key")
-klaviyo_members_list_id = config.require("klaviyo_members_list_id")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -155,6 +154,7 @@ def make_standard_webapp_configuration(args) -> str:
     twilio_message_service_sid: str = remaining[27]
     slack_oseh_bot_url: str = remaining[28]
     interactive_prompt_jwt_secret: str = remaining[29]
+    klaviyo_api_key: str = remaining[30]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -198,6 +198,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_TWILIO_PHONE_NUMBER="{twilio_phone_number}"',
             f'export OSEH_TWILIO_VERIFY_SERVICE_SID="{twilio_verify_service_sid}"',
             f'export OSEH_TWILIO_MESSAGE_SERVICE_SID="{twilio_message_service_sid}"',
+            f'export OSEH_KLAVIYO_API_KEY="{klaviyo_api_key}"',
             f'export SLACK_OSEH_BOT_URL="{slack_oseh_bot_url}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
@@ -322,6 +323,7 @@ standard_configuration = pulumi.Output.all(
     twilio_message_service_sid,
     slack_oseh_bot_url,
     interactive_prompt_jwt_secret,
+    klaviyo_api_key,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
