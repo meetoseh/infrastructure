@@ -29,6 +29,7 @@ deployment_secret = config.require_secret("deployment_secret")
 slack_web_errors_url = config.require_secret("slack_web_errors_url")
 slack_ops_url = config.require_secret("slack_ops_url")
 slack_oseh_bot_url = config.require_secret("slack_oseh_bot_url")
+slack_oseh_classes_url = config.require_secret("slack_oseh_classes_url")
 google_oidc_client_id = config.require("google_oidc_client_id")
 google_oidc_client_secret = config.require_secret("google_oidc_client_secret")
 expo_username = config.require("expo_username")
@@ -155,6 +156,7 @@ def make_standard_webapp_configuration(args) -> str:
     slack_oseh_bot_url: str = remaining[28]
     interactive_prompt_jwt_secret: str = remaining[29]
     klaviyo_api_key: str = remaining[30]
+    slack_oseh_classes_url: str = remaining[31]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -200,6 +202,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_TWILIO_MESSAGE_SERVICE_SID="{twilio_message_service_sid}"',
             f'export OSEH_KLAVIYO_API_KEY="{klaviyo_api_key}"',
             f'export SLACK_OSEH_BOT_URL="{slack_oseh_bot_url}"',
+            f'export SLACK_OSEH_CLASSES_URL="{slack_oseh_classes_url}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -227,7 +230,7 @@ backend_rest = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter,
+    webapp_counter=webapp_counter + 1,
     instance_type="t4g.small",  # i think it's running out of memory on the nano occassionally
 )
 backend_ws = webapp.Webapp(
@@ -260,7 +263,7 @@ high_resource_jobs = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter + 2,
+    webapp_counter=webapp_counter + 1,
     instance_type="m6g.large",  # >= 3gb for video processing
     bleeding_ami=True,  # required for pympanim
 )
@@ -272,7 +275,7 @@ low_resource_jobs = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter + 2,
+    webapp_counter=webapp_counter,
     instance_type="t4g.small",  # ffmpeg memory >1.3gb to install
     bleeding_ami=True,  # required for pympanim
 )
@@ -324,6 +327,7 @@ standard_configuration = pulumi.Output.all(
     slack_oseh_bot_url,
     interactive_prompt_jwt_secret,
     klaviyo_api_key,
+    slack_oseh_classes_url,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
