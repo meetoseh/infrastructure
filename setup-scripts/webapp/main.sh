@@ -21,6 +21,8 @@ then
     fi
     bash -c "source /home/ec2-user/config.sh && bash scripts/auto/after_install.sh && bash scripts/auto/start.sh"
 else
+    cd webapp
+    git remote set-url origin "https://${GITHUB_USERNAME}:${GITHUB_PAT}@github.com/${GITHUB_REPOSITORY}"
     bash /home/ec2-user/update_webapp.sh
 fi
 cd /home/ec2-user

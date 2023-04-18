@@ -198,7 +198,7 @@ class VirtualPrivateCloud:
         self.amazon_linux_bleeding_arm64 = aws.ec2.get_ami(
             most_recent=True,
             filters=[
-                aws.ec2.GetAmiFilterArgs(name="name", values=["al2022-ami-20*"]),
+                aws.ec2.GetAmiFilterArgs(name="name", values=["al2023-ami-20*"]),
                 aws.ec2.GetAmiFilterArgs(name="virtualization-type", values=["hvm"]),
                 aws.ec2.GetAmiFilterArgs(name="architecture", values=["arm64"]),
             ],

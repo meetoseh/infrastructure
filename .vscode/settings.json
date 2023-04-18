@@ -1,5 +1,9 @@
 {
-    "python.analysis.diagnosticSeverityOverrides": {
-        "reportShadowedImports": "none"
-    }
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportShadowedImports": "none"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "python.formatting.provider": "none"
 }

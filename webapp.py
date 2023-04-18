@@ -35,6 +35,7 @@ class Webapp:
         num_instances_per_subnet: int = 1,
         bleeding_ami: bool = False,
         webapp_counter: int = 0,
+        volume_size: int = 8,
     ):
         """Creates a new webapp in the first N private subnets of the
         given virtual private cloud.
@@ -64,6 +65,7 @@ class Webapp:
                 the latest long term stable ami
             webapp_counter (int): Doesn't do anything, but changing it will force the
                 instances to be recreated
+            volume_size (int): How large the volume should be, in gigabytes
 
         """
         self.resource_name: str = resource_name
@@ -117,7 +119,7 @@ class Webapp:
             else aws.ec2.get_ami(
                 most_recent=True,
                 filters=[
-                    aws.ec2.GetAmiFilterArgs(name="name", values=["al2022-ami-20*"]),
+                    aws.ec2.GetAmiFilterArgs(name="name", values=["al2023-ami-20*"]),
                     aws.ec2.GetAmiFilterArgs(
                         name="virtualization-type", values=["hvm"]
                     ),
@@ -159,6 +161,10 @@ class Webapp:
                     key_name=self.vpc.key.key_pair.key_name,
                     vpc_security_group_ids=[self.security_group.id],
                     iam_instance_profile=self.vpc.standard_instance_profile.name,
+                    root_block_device=aws.ec2.InstanceRootBlockDeviceArgs(
+                        volume_size=volume_size,
+                        volume_type="gp3",
+                    ),
                     tags={
                         "Name": f"{resource_name} {vpc.availability_zones[subnet_idx]}-{instance_idx}",
                         "Webapp-Counter": str(webapp_counter),

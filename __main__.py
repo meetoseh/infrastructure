@@ -51,6 +51,7 @@ daily_event_jwt_secret = config.require_secret("daily_event_jwt_secret")
 interactive_prompt_jwt_secret = config.require_secret("interactive_prompt_jwt_secret")
 id_token_secret = config.require_secret("id_token_secret")
 refresh_token_secret = config.require_secret("refresh_token_secret")
+course_jwt_secret = config.require_secret("course_jwt_secret")
 revenue_cat_secret_key = config.require_secret("revenue_cat_secret_key")
 revenue_cat_stripe_public_key = config.require_secret("revenue_cat_stripe_public_key")
 stripe_secret_key = config.require_secret("stripe_secret_key")
@@ -157,6 +158,7 @@ def make_standard_webapp_configuration(args) -> str:
     interactive_prompt_jwt_secret: str = remaining[29]
     klaviyo_api_key: str = remaining[30]
     slack_oseh_classes_url: str = remaining[31]
+    course_jwt_secret: str = remaining[32]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -203,6 +205,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_KLAVIYO_API_KEY="{klaviyo_api_key}"',
             f'export SLACK_OSEH_BOT_URL="{slack_oseh_bot_url}"',
             f'export SLACK_OSEH_CLASSES_URL="{slack_oseh_classes_url}"',
+            f'export OSEH_COURSE_JWT_SECRET="{course_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -232,6 +235,7 @@ backend_rest = webapp.Webapp(
     key,
     webapp_counter=webapp_counter + 1,
     instance_type="t4g.small",  # i think it's running out of memory on the nano occassionally
+    volume_size=16,  # disk caching for the audio/image files
 )
 backend_ws = webapp.Webapp(
     "backend_ws",
@@ -328,6 +332,7 @@ standard_configuration = pulumi.Output.all(
     interactive_prompt_jwt_secret,
     klaviyo_api_key,
     slack_oseh_classes_url,
+    course_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
