@@ -96,7 +96,20 @@ main_vpc = vpc.VirtualPrivateCloud("main_vpc", key)
 # one node losing all its data. To do this, keep rqlite_id_offset the same and go
 # through the increment maintenance subnet idx until all nodes are replaced. Allow
 # enough time for the node to recover before moving onto the next node
-main_rqlite = rqlite.RqliteCluster("main_rqlite", main_vpc, id_offset=rqlite_id_offset)
+#
+# After updating a node, connect to that node via the rqlite command line interface
+# and run `.nodes` to ensure the nodes match what are expected. If the update does
+# not work correctly, errors won't occur until the second node is updated, so it's
+# important to manually check after the first node as there will not be any automatic
+# alerts.
+#
+# READ ABOVE FIRST
+main_rqlite = rqlite.RqliteCluster(
+    "main_rqlite",
+    main_vpc,
+    id_offset=rqlite_id_offset,
+    allow_maintenance_subnet_idx=None,
+)
 
 # There is only one option for redis; add/remove a node. THIS DOES NOT WORK ON
 # THE MASTER INSTANCE. You must first identify the master instance (info
@@ -268,6 +281,7 @@ high_resource_jobs = webapp.Webapp(
     main_vpc.bastion.public_ip,
     key,
     webapp_counter=webapp_counter + 1,
+    num_instances_per_subnet=1,
     instance_type="m6g.large",  # >= 3gb for video processing
     bleeding_ami=True,  # required for pympanim
 )
@@ -362,6 +376,10 @@ pulumi.export(
     high_resource_jobs.instances_by_subnet[0][0].private_ip,
 )
 pulumi.export("example rqlite ip", main_rqlite.instances[0].private_ip)
+pulumi.export(
+    "all rqlite ips",
+    pulumi.Output.all(instance.private_ip for instance in main_rqlite.instances),
+)
 pulumi.export("redis ip 0", main_redis.instances[0].private_ip)
 pulumi.export("redis ip 1", main_redis.instances[1].private_ip)
 pulumi.export("redis ip 2", main_redis.instances[2].private_ip)

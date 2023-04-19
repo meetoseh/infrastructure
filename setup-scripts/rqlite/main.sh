@@ -30,12 +30,7 @@ start_rqlite_cluster() {
 
     echo "#!/usr/bin/env bash" > /home/ec2-user/start_rqlited.sh
 
-    if [ "$NODE_ID" = "$DEFAULT_LEADER_NODE_ID" ]
-    then
-        echo "rqlited -fk=true -node-id $NODE_ID -http-addr $MY_IP:4001 -raft-addr $MY_IP:4002 -on-disk /home/ec2-user/rqlite-data 2>&1 | tee -a /home/ec2-user/rqlite.log" >> /home/ec2-user/start_rqlited.sh
-    else
-        echo "rqlited -fk=true -node-id $NODE_ID -join $JOIN_ADDRESS -join-attempts 1000 -http-addr $MY_IP:4001 -raft-addr $MY_IP:4002 -on-disk /home/ec2-user/rqlite-data 2>&1 | tee -a /home/ec2-user/rqlite.log" >> /home/ec2-user/start_rqlited.sh
-    fi
+    echo "rqlited -fk=true -node-id $NODE_ID -http-addr $MY_IP:4001 -raft-addr $MY_IP:4002 -bootstrap-expect $NUM_NODES -join $JOIN_ADDRESS -join-attempts 1000 -on-disk /home/ec2-user/rqlite-data 2>&1 | tee -a /home/ec2-user/rqlite.log" >> /home/ec2-user/start_rqlited.sh
     chmod +x /home/ec2-user/start_rqlited.sh
 
     while screen -S rqlited -X stuff "^C"
@@ -77,6 +72,7 @@ remove_old_nodes() {
 main() {
     local script_dir=$(pwd)
     bash shared/wait_boot_finished.sh
+
     install_rqlite
     cd "$script_dir"
     start_rqlite_cluster
