@@ -88,7 +88,7 @@ class RqliteCluster:
                 f"{resource_name}-instance-{cluster_id}",
                 ami=self.vpc.amazon_linux_bleeding_arm64.id,
                 associate_public_ip_address=False,
-                instance_type="t4g.nano",
+                instance_type="t4g.small",
                 subnet_id=self.vpc.private_subnets[
                     cluster_id % len(self.vpc.private_subnets)
                 ],

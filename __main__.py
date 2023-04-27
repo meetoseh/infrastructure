@@ -63,6 +63,8 @@ twilio_phone_number = config.require("twilio_phone_number")
 twilio_verify_service_sid = config.require("twilio_verify_service_sid")
 twilio_message_service_sid = config.require("twilio_message_service_sid")
 klaviyo_api_key = config.require_secret("klaviyo_api_key")
+oseh_openai_api_key = config.require_secret("oseh_openai_api_key")
+oseh_pexels_api_key = config.require_secret("oseh_pexels_api_key")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -172,6 +174,8 @@ def make_standard_webapp_configuration(args) -> str:
     klaviyo_api_key: str = remaining[30]
     slack_oseh_classes_url: str = remaining[31]
     course_jwt_secret: str = remaining[32]
+    oseh_openai_api_key: str = remaining[33]
+    oseh_pexels_api_key: str = remaining[34]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -219,6 +223,8 @@ def make_standard_webapp_configuration(args) -> str:
             f'export SLACK_OSEH_BOT_URL="{slack_oseh_bot_url}"',
             f'export SLACK_OSEH_CLASSES_URL="{slack_oseh_classes_url}"',
             f'export OSEH_COURSE_JWT_SECRET="{course_jwt_secret}"',
+            f'export OSEH_OPENAI_API_KEY="{oseh_openai_api_key}"',
+            f'export OSEH_PEXELS_API_KEY="{oseh_pexels_api_key}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -282,7 +288,7 @@ high_resource_jobs = webapp.Webapp(
     key,
     webapp_counter=webapp_counter + 1,
     num_instances_per_subnet=1,
-    instance_type="m6g.large",  # >= 3gb for video processing
+    instance_type="m6g.large",  # needs at least 3 GiB memory; c7g.2xlarge does a ~2m video in 47m
     bleeding_ami=True,  # required for pympanim
 )
 low_resource_jobs = webapp.Webapp(
@@ -347,6 +353,8 @@ standard_configuration = pulumi.Output.all(
     klaviyo_api_key,
     slack_oseh_classes_url,
     course_jwt_secret,
+    oseh_openai_api_key,
+    oseh_pexels_api_key,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration

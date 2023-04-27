@@ -41,6 +41,11 @@ class RedisCluster:
                 head syndrome. Should never replace the main instance directly;
                 always force a failover first.
         """
+        if allow_maintenance_subnet_idx is not None and main_ip is None:
+            raise Exception(
+                "main_ip must be specified if allow_maintenance_subnet_idx is specified"
+            )
+
         self.resource_name: str = resource_name
         """the resource name prefix to use for resources created by this instance"""
 
