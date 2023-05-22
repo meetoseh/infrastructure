@@ -65,6 +65,14 @@ twilio_message_service_sid = config.require("twilio_message_service_sid")
 klaviyo_api_key = config.require_secret("klaviyo_api_key")
 oseh_openai_api_key = config.require_secret("oseh_openai_api_key")
 oseh_pexels_api_key = config.require_secret("oseh_pexels_api_key")
+oseh_stability_ai_key = config.require_secret("oseh_stability_ai_key")
+oseh_play_ht_user_id = config.require("oseh_play_ht_user_id")
+oseh_play_ht_api_key = config.require_secret("oseh_play_ht_api_key")
+oseh_reddit_client_id = config.require_secret("oseh_reddit_client_id")
+oseh_reddit_client_secret = config.require_secret("oseh_reddit_client_secret")
+oseh_mastodon_client_id = config.require_secret("oseh_mastodon_client_id")
+oseh_mastodon_client_secret = config.require_secret("oseh_mastodon_client_secret")
+oseh_mastodon_access_token = config.require_secret("oseh_mastodon_access_token")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -176,6 +184,14 @@ def make_standard_webapp_configuration(args) -> str:
     course_jwt_secret: str = remaining[32]
     oseh_openai_api_key: str = remaining[33]
     oseh_pexels_api_key: str = remaining[34]
+    oseh_stability_ai_key: str = remaining[35]
+    oseh_play_ht_user_id: str = remaining[36]
+    oseh_play_ht_api_key: str = remaining[37]
+    oseh_reddit_client_id: str = remaining[38]
+    oseh_reddit_client_secret: str = remaining[39]
+    oseh_mastodon_client_id: str = remaining[40]
+    oseh_mastodon_client_secret: str = remaining[41]
+    oseh_mastodon_access_token: str = remaining[42]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -225,6 +241,14 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_COURSE_JWT_SECRET="{course_jwt_secret}"',
             f'export OSEH_OPENAI_API_KEY="{oseh_openai_api_key}"',
             f'export OSEH_PEXELS_API_KEY="{oseh_pexels_api_key}"',
+            f'export OSEH_STABILITY_AI_KEY="{oseh_stability_ai_key}"',
+            f'export OSEH_PLAY_HT_USER_ID="{oseh_play_ht_user_id}"',
+            f'export OSEH_PLAY_HT_SECRET_KEY="{oseh_play_ht_api_key}"',
+            f'export OSEH_REDDIT_CLIENT_ID="{oseh_reddit_client_id}"',
+            f'export OSEH_REDDIT_CLIENT_SECRET="{oseh_reddit_client_secret}"',
+            f'export OSEH_MASTODON_CLIENT_ID="{oseh_mastodon_client_id}"',
+            f'export OSEH_MASTODON_CLIENT_SECRET="{oseh_mastodon_client_secret}"',
+            f'export OSEH_MASTODON_ACCESS_TOKEN="{oseh_mastodon_access_token}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -355,6 +379,14 @@ standard_configuration = pulumi.Output.all(
     course_jwt_secret,
     oseh_openai_api_key,
     oseh_pexels_api_key,
+    oseh_stability_ai_key,
+    oseh_play_ht_user_id,
+    oseh_play_ht_api_key,
+    oseh_reddit_client_id,
+    oseh_reddit_client_secret,
+    oseh_mastodon_client_id,
+    oseh_mastodon_client_secret,
+    oseh_mastodon_access_token,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
