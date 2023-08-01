@@ -73,6 +73,14 @@ oseh_reddit_client_secret = config.require_secret("oseh_reddit_client_secret")
 oseh_mastodon_client_id = config.require_secret("oseh_mastodon_client_id")
 oseh_mastodon_client_secret = config.require_secret("oseh_mastodon_client_secret")
 oseh_mastodon_access_token = config.require_secret("oseh_mastodon_access_token")
+oseh_direct_account_client_id = config.require_secret("oseh_direct_account_client_id")
+oseh_direct_account_client_secret = config.require_secret(
+    "oseh_direct_account_client_secret"
+)
+oseh_direct_account_redirect_path = config.require("oseh_direct_account_redirect_path")
+oseh_direct_account_jwt_secret = config.require_secret("oseh_direct_account_jwt_secret")
+oseh_csrf_jwt_secret_web = config.require_secret("oseh_csrf_jwt_secret_web")
+oseh_csrf_jwt_secret_native = config.require_secret("oseh_csrf_jwt_secret_native")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -192,6 +200,12 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_mastodon_client_id: str = remaining[40]
     oseh_mastodon_client_secret: str = remaining[41]
     oseh_mastodon_access_token: str = remaining[42]
+    oseh_direct_account_client_id: str = remaining[43]
+    oseh_direct_account_client_secret: str = remaining[44]
+    oseh_direct_account_redirect_path: str = remaining[45]
+    oseh_direct_account_jwt_secret: str = remaining[46]
+    oseh_csrf_jwt_secret_web: str = remaining[47]
+    oseh_csrf_jwt_secret_native: str = remaining[48]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -249,6 +263,12 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_MASTODON_CLIENT_ID="{oseh_mastodon_client_id}"',
             f'export OSEH_MASTODON_CLIENT_SECRET="{oseh_mastodon_client_secret}"',
             f'export OSEH_MASTODON_ACCESS_TOKEN="{oseh_mastodon_access_token}"',
+            f'export OSEH_DIRECT_ACCOUNT_CLIENT_ID="{oseh_direct_account_client_id}"',
+            f'export OSEH_DIRECT_ACCOUNT_CLIENT_SECRET="{oseh_direct_account_client_secret}"',
+            f'export OSEH_DIRECT_ACCOUNT_REDIRECT_PATH="{oseh_direct_account_redirect_path}"',
+            f'export OSEH_DIRECT_ACCOUNT_JWT_SECRET="{oseh_direct_account_jwt_secret}"',
+            f'export OSEH_CSRF_JWT_SECRET_WEB="{oseh_csrf_jwt_secret_web}"',
+            f'export OSEH_CSRF_JWT_SECRET_NATIVE="{oseh_csrf_jwt_secret_native}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -387,6 +407,12 @@ standard_configuration = pulumi.Output.all(
     oseh_mastodon_client_id,
     oseh_mastodon_client_secret,
     oseh_mastodon_access_token,
+    oseh_direct_account_client_id,
+    oseh_direct_account_client_secret,
+    oseh_direct_account_redirect_path,
+    oseh_direct_account_jwt_secret,
+    oseh_csrf_jwt_secret_web,
+    oseh_csrf_jwt_secret_native,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
