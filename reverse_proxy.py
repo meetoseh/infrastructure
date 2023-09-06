@@ -21,6 +21,7 @@ class ReverseProxy:
         key: Key,
         rest_backend: Webapp,
         ws_backend: Webapp,
+        email_template_backend: Webapp,
         frontend: Webapp,
     ) -> None:
         """Creates a reverse proxy in the first 2 public subnets of
@@ -35,6 +36,8 @@ class ReverseProxy:
                 backend
             ws_backend (Webapp): The webapp responsible for the websocket
                 backend
+            email_template_backend (Webapp): The webapp responsible for
+                generating emails from a template name and props
             frontend (Webapp): The webapp responsible for the frontend
         """
         self.resource_name: str = resource_name
@@ -48,6 +51,9 @@ class ReverseProxy:
 
         self.ws_backend: Webapp = ws_backend
         """The backend for websocket api requests"""
+
+        self.email_template_backend: Webapp = email_template_backend
+        """The backend for generating emails"""
 
         self.frontend: Webapp = frontend
         """The application for frontend requests"""
@@ -115,6 +121,9 @@ class ReverseProxy:
                         "nginx.conf": {
                             "BACKEND_UPSTREAM": get_upstreams(self.rest_backend),
                             "WEBSOCKET_UPSTREAM": get_upstreams(self.ws_backend),
+                            "EMAIL_TEMPLATE_UPSTREAM": get_upstreams(
+                                self.email_template_backend
+                            ),
                             "FRONTEND_UPSTREAM": get_upstreams(self.frontend),
                         }
                     },

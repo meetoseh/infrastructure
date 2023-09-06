@@ -2,6 +2,7 @@ import base64
 from typing import List
 import pulumi
 import pulumi_aws as aws
+from mail import SimpleEmailService
 import vpc
 from tls import TransportLayerSecurity
 from key import Key
@@ -81,6 +82,10 @@ oseh_direct_account_redirect_path = config.require("oseh_direct_account_redirect
 oseh_direct_account_jwt_secret = config.require_secret("oseh_direct_account_jwt_secret")
 oseh_csrf_jwt_secret_web = config.require_secret("oseh_csrf_jwt_secret_web")
 oseh_csrf_jwt_secret_native = config.require_secret("oseh_csrf_jwt_secret_native")
+oseh_expo_notification_access_token = config.require_secret(
+    "oseh_expo_notification_access_token"
+)
+oseh_email_template_jwt_secret = config.require_secret("oseh_email_template_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -206,6 +211,8 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_direct_account_jwt_secret: str = remaining[46]
     oseh_csrf_jwt_secret_web: str = remaining[47]
     oseh_csrf_jwt_secret_native: str = remaining[48]
+    oseh_expo_notification_access_token: str = remaining[49]
+    oseh_email_template_jwt_secret: str = remaining[50]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -269,6 +276,8 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_DIRECT_ACCOUNT_JWT_SECRET="{oseh_direct_account_jwt_secret}"',
             f'export OSEH_CSRF_JWT_SECRET_WEB="{oseh_csrf_jwt_secret_web}"',
             f'export OSEH_CSRF_JWT_SECRET_NATIVE="{oseh_csrf_jwt_secret_native}"',
+            f'export OSEH_EXPO_NOTIFICATION_ACCESS_TOKEN="{oseh_expo_notification_access_token}"',
+            f'export OSEH_EMAIL_TEMPLATE_JWT_SECRET="{oseh_email_template_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -347,8 +356,26 @@ low_resource_jobs = webapp.Webapp(
     instance_type="t4g.small",  # ffmpeg memory >1.3gb to install
     bleeding_ami=True,  # required for pympanim
 )
+backend_email_templates = webapp.Webapp(
+    "email-templates",
+    main_vpc,
+    "meetoseh/email-templates",
+    github_username,
+    github_pat,
+    main_vpc.bastion.public_ip,
+    key,
+    webapp_counter=webapp_counter,
+    instance_type="t4g.small",  # node requires 1.2gb ram to build :/
+    bleeding_ami=True,  # required for node 18
+)
 main_reverse_proxy = reverse_proxy.ReverseProxy(
-    "main_reverse_proxy", main_vpc, key, backend_rest, backend_ws, frontend
+    "main_reverse_proxy",
+    main_vpc,
+    key,
+    backend_rest,
+    backend_ws,
+    backend_email_templates,
+    frontend,
 )
 tls = TransportLayerSecurity(
     "tls",
@@ -413,6 +440,8 @@ standard_configuration = pulumi.Output.all(
     oseh_direct_account_jwt_secret,
     oseh_csrf_jwt_secret_web,
     oseh_csrf_jwt_secret_native,
+    oseh_expo_notification_access_token,
+    oseh_email_template_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
@@ -423,9 +452,21 @@ low_resource_config = pulumi.Output.all(standard_configuration).apply(
 
 backend_rest.perform_remote_executions(standard_configuration)
 backend_ws.perform_remote_executions(standard_configuration)
+backend_email_templates.perform_remote_executions(standard_configuration)
 frontend.perform_remote_executions(standard_configuration)
 high_resource_jobs.perform_remote_executions(high_resource_config)
 low_resource_jobs.perform_remote_executions(low_resource_config)
+
+mail = SimpleEmailService(
+    "mail",
+    tls,
+    "/api/1/emails/sns-mail",
+    [
+        *(itm for row in backend_rest.remote_executions_by_subnet for itm in row),
+        *(itm for itm in main_reverse_proxy.reverse_proxy_installs),
+        tls.lb_tls_listener,
+    ],
+)
 
 pulumi.export(
     "example reverse proxy ip", main_reverse_proxy.reverse_proxies[0].private_ip
@@ -433,6 +474,10 @@ pulumi.export(
 pulumi.export("example frontend-web ip", frontend.instances_by_subnet[0][0].private_ip)
 pulumi.export("example backend ip", backend_rest.instances_by_subnet[0][0].private_ip)
 pulumi.export("example websocket ip", backend_ws.instances_by_subnet[0][0].private_ip)
+pulumi.export(
+    "example email template ip",
+    backend_email_templates.instances_by_subnet[0][0].private_ip,
+)
 pulumi.export(
     "example low resource jobs ip",
     low_resource_jobs.instances_by_subnet[0][0].private_ip,
