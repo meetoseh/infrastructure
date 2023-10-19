@@ -253,7 +253,22 @@ class VirtualPrivateCloud:
                             ],
                         }
                     ),
-                )
+                ),
+                aws.iam.RoleInlinePolicyArgs(
+                    name="ses",
+                    policy=json.dumps(
+                        {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": ["ses:*"],
+                                    "Effect": "Allow",
+                                    "Resource": "*",
+                                }
+                            ],
+                        }
+                    ),
+                ),
             ],
             tags={
                 "Name": "webapp-iam-role",

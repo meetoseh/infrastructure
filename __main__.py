@@ -86,6 +86,7 @@ oseh_expo_notification_access_token = config.require_secret(
     "oseh_expo_notification_access_token"
 )
 oseh_email_template_jwt_secret = config.require_secret("oseh_email_template_jwt_secret")
+oseh_siwo_jwt_secret = config.require_secret("oseh_siwo_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -213,6 +214,7 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_csrf_jwt_secret_native: str = remaining[48]
     oseh_expo_notification_access_token: str = remaining[49]
     oseh_email_template_jwt_secret: str = remaining[50]
+    oseh_siwo_jwt_secret: str = remaining[51]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -231,6 +233,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export ROOT_FRONTEND_URL="https://{domain_no_trailing_dot}"',
             f'export ROOT_BACKEND_URL="https://{domain_no_trailing_dot}"',
             f'export ROOT_WEBSOCKET_URL="wss://{domain_no_trailing_dot}"',
+            f'export ROOT_EMAIL_TEMPLATE_URL="https://{domain_no_trailing_dot}"',
             f'export OSEH_S3_BUCKET_NAME="{s3_bucket_name}"',
             f'export OSEH_IMAGE_FILE_JWT_SECRET="{image_file_jwt_secret}"',
             f'export OSEH_FILE_UPLOAD_JWT_SECRET="{file_upload_jwt_secret}"',
@@ -238,6 +241,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_JOURNEY_JWT_SECRET="{journey_jwt_secret}"',
             f'export OSEH_DAILY_EVENT_JWT_SECRET="{daily_event_jwt_secret}"',
             f'export OSEH_INTERACTIVE_PROMPT_JWT_SECRET="{interactive_prompt_jwt_secret}"',
+            f'export OSEH_SIWO_JWT_SECRET="{oseh_siwo_jwt_secret}"',
             f'export OSEH_REVENUE_CAT_SECRET_KEY="{revenue_cat_secret_key}"',
             f'export OSEH_REVENUE_CAT_STRIPE_PUBLIC_KEY="{revenue_cat_stripe_public_key}"',
             f'export OSEH_STRIPE_SECRET_KEY="{stripe_secret_key}"',
@@ -442,6 +446,7 @@ standard_configuration = pulumi.Output.all(
     oseh_csrf_jwt_secret_native,
     oseh_expo_notification_access_token,
     oseh_email_template_jwt_secret,
+    oseh_siwo_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration

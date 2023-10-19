@@ -122,9 +122,11 @@ class ReverseProxy:
                             "BACKEND_UPSTREAM": get_upstreams(self.rest_backend),
                             "WEBSOCKET_UPSTREAM": get_upstreams(self.ws_backend),
                             "EMAIL_TEMPLATE_UPSTREAM": get_upstreams(
-                                self.email_template_backend
+                                self.email_template_backend, disable_fail_time=True
                             ),
-                            "FRONTEND_UPSTREAM": get_upstreams(self.frontend),
+                            "FRONTEND_UPSTREAM": get_upstreams(
+                                self.frontend, disable_fail_time=True
+                            ),
                         }
                     },
                     host=instance.private_ip,
@@ -138,7 +140,9 @@ class ReverseProxy:
         """The commands to install and configure nginx on each reverse proxy"""
 
 
-def get_upstreams(webapp: Webapp) -> pulumi.Input[str]:
+def get_upstreams(
+    webapp: Webapp, *, disable_fail_time: bool = False
+) -> pulumi.Input[str]:
     """Produces the correct upstream substitution to target the given
     webapp, i.e., the string of the format
 
@@ -146,6 +150,15 @@ def get_upstreams(webapp: Webapp) -> pulumi.Input[str]:
         server 10.0.2.0:80;
 
     where the ip addresses target instances of the webapp in all subnets
+
+    Args:
+        disable_fail_time (bool): If true, we set max_fails=0 in order to
+            disable the accounting of failed attempts. This means that whenever
+            a request is made, every server will be attempted before a loss,
+            rather than only the servers that have not failed recently. If
+            the requests are fast, this will improve availability
+            during updates. Otherwise, we reduce fail time to 3s from the
+            default of 10s
     """
     all_instances: List[aws.ec2.Instance] = list(
         itertools.chain(
@@ -156,8 +169,17 @@ def get_upstreams(webapp: Webapp) -> pulumi.Input[str]:
         )
     )
 
+    def make_upstream_item(ip_address: str) -> str:
+        res = f"server {ip_address}:80"
+        if disable_fail_time:
+            res += " max_fails=0"
+        else:
+            res += " fail_timeout=3s"
+        res += ";"
+        return res
+
     def make_upstream(ip_addresses: Tuple[Sequence[str]]) -> str:
-        return "\n".join(f"server {ip}:80;" for ip in ip_addresses[0])
+        return "\n".join(make_upstream_item(ip) for ip in ip_addresses[0])
 
     return pulumi.Output.all([inst.private_ip for inst in all_instances]).apply(
         make_upstream
