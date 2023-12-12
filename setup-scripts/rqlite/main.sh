@@ -30,13 +30,15 @@ start_rqlite_cluster() {
 
     echo "#!/usr/bin/env bash" > /home/ec2-user/start_rqlited.sh
 
-    echo "rqlited -fk=true -node-id $NODE_ID -http-addr $MY_IP:4001 -raft-addr $MY_IP:4002 -bootstrap-expect $NUM_NODES -join $JOIN_ADDRESS -join-attempts 1000 -on-disk /home/ec2-user/rqlite-data 2>&1 | tee -a /home/ec2-user/rqlite.log" >> /home/ec2-user/start_rqlited.sh
+    echo "rqlited -fk=true -node-id $NODE_ID -http-addr $MY_IP:4001 -raft-addr $MY_IP:4002 -bootstrap-expect $NUM_NODES -join $JOIN_ADDRESS -join-attempts 1000 /home/ec2-user/rqlite-data 2>&1 | tee -a /home/ec2-user/rqlite.log" >> /home/ec2-user/start_rqlited.sh
     chmod +x /home/ec2-user/start_rqlited.sh
 
+    echo Waiting for rqlited to stop...
     while screen -S rqlited -X stuff "^C"
     do
         sleep 1
     done
+    echo rqlited stopped
 
     # if we don't change directory it will slow screen -r
     bash -c "cd /home/ec2-user && screen -dmS rqlited /home/ec2-user/start_rqlited.sh"

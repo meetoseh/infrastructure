@@ -87,6 +87,7 @@ oseh_expo_notification_access_token = config.require_secret(
 )
 oseh_email_template_jwt_secret = config.require_secret("oseh_email_template_jwt_secret")
 oseh_siwo_jwt_secret = config.require_secret("oseh_siwo_jwt_secret")
+oseh_merge_jwt_secret = config.require_secret("oseh_merge_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -215,6 +216,11 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_expo_notification_access_token: str = remaining[49]
     oseh_email_template_jwt_secret: str = remaining[50]
     oseh_siwo_jwt_secret: str = remaining[51]
+    oseh_build_subnet_id: str = remaining[52]
+    oseh_build_ami_id: str = remaining[53]
+    oseh_build_security_group_id: str = remaining[54]
+    oseh_build_iam_instance_profile_name: str = remaining[55]
+    oseh_merge_jwt_secret: str = remaining[56]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -282,6 +288,11 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_CSRF_JWT_SECRET_NATIVE="{oseh_csrf_jwt_secret_native}"',
             f'export OSEH_EXPO_NOTIFICATION_ACCESS_TOKEN="{oseh_expo_notification_access_token}"',
             f'export OSEH_EMAIL_TEMPLATE_JWT_SECRET="{oseh_email_template_jwt_secret}"',
+            f'export OSEH_BUILD_SUBNET_ID="{oseh_build_subnet_id}"',
+            f'export OSEH_BUILD_AMI_ID="{oseh_build_ami_id}"',
+            f'export OSEH_BUILD_SECURITY_GROUP_ID="{oseh_build_security_group_id}"',
+            f'export OSEH_BUILD_IAM_INSTANCE_PROFILE_NAME="{oseh_build_iam_instance_profile_name}"',
+            f'export OSEH_MERGE_JWT_SECRET="{oseh_merge_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -310,6 +321,7 @@ backend_rest = webapp.Webapp(
     main_vpc.bastion.public_ip,
     key,
     webapp_counter=webapp_counter + 1,
+    bleeding_ami=True,  # python version 3.9+
     instance_type="t4g.small",  # i think it's running out of memory on the nano occassionally
     volume_size=16,  # disk caching for the audio/image files
 )
@@ -331,8 +343,8 @@ frontend = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    instance_type="t4g.small",  # node requires 1.2gb ram to build :/
-    bleeding_ami=True,  # required for node 18
+    instance_type="t4g.nano",
+    bleeding_ami=True,
     webapp_counter=webapp_counter,
 )
 high_resource_jobs = webapp.Webapp(
@@ -447,6 +459,11 @@ standard_configuration = pulumi.Output.all(
     oseh_expo_notification_access_token,
     oseh_email_template_jwt_secret,
     oseh_siwo_jwt_secret,
+    main_vpc.private_subnets[0].id,
+    main_vpc.amazon_linux_bleeding_arm64.id,
+    frontend.security_group.id,
+    main_vpc.standard_instance_profile.name,
+    oseh_merge_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration

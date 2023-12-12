@@ -1,6 +1,6 @@
 """This module allows creating a rqlite cluster"""
 import json
-from typing import List, Optional
+from typing import List, Optional, Union, Literal
 from remote_executor import RemoteExecution, RemoteExecutionInputs
 from vpc import VirtualPrivateCloud
 import pulumi_aws as aws
@@ -16,7 +16,7 @@ class RqliteCluster:
         resource_name: str,
         vpc: VirtualPrivateCloud,
         id_offset: int = 0,
-        allow_maintenance_subnet_idx: Optional[int] = None,
+        allow_maintenance_subnet_idx: Optional[Union[int, Literal["all"]]] = None,
     ) -> None:
         """Creates a new rqlite cluster running on the private subnets
         of the given virtual private cloud.
@@ -30,7 +30,7 @@ class RqliteCluster:
                 of this cluster and should no longer be. for example, if you want
                 to cleanly update the cluster seamlessly, simply increment this by
                 one, up, and repeat until all instances are replaced
-            allow_maintenance_subnet_id (int, None): the subnet id to allow maintenance
+            allow_maintenance_subnet_id (int, None, "all"): the subnet id to allow maintenance
                 on. On other instances we will ignore standard maintenance for
                 replacing the instance, e.g., ami. If None, no maintenance will
                 be allowed. Typically this should be set to 0, the first subnet -
@@ -106,14 +106,20 @@ class RqliteCluster:
                     delete_before_replace=True,
                     ignore_changes=(
                         ["ami", "instance_type", "tags"]
-                        if allow_maintenance_subnet_idx
-                        != (cluster_id % len(self.vpc.private_subnets))
+                        if allow_maintenance_subnet_idx != "all"
+                        and (
+                            allow_maintenance_subnet_idx
+                            != (cluster_id % len(self.vpc.private_subnets))
+                        )
                         else []
                     ),
                     replace_on_changes=(
                         ["tags"]
-                        if allow_maintenance_subnet_idx
-                        == (cluster_id % len(self.vpc.private_subnets))
+                        if allow_maintenance_subnet_idx != "all"
+                        and (
+                            allow_maintenance_subnet_idx
+                            == (cluster_id % len(self.vpc.private_subnets))
+                        )
                         else None
                     ),
                 ),
@@ -143,9 +149,7 @@ class RqliteCluster:
                         "NODE_ID": str(cluster_id),
                         "DEFAULT_LEADER_NODE_ID": str(self.instance_cluster_ids[0]),
                         "MY_IP": my_ip,
-                        "JOIN_ADDRESS": ",".join(
-                            f"http://{ip}:4001" for ip in instance_ips
-                        ),
+                        "JOIN_ADDRESS": ",".join(f"{ip}:4002" for ip in instance_ips),
                         "NUM_NODES": str(len(instance_ips)),
                     },
                     "peers.json": {
@@ -188,8 +192,13 @@ class RqliteCluster:
                                     "script_name",
                                     "shared_script_name",
                                 ]
-                                if allow_maintenance_subnet_idx
-                                != (cluster_id_outer % len(self.vpc.private_subnets))
+                                if allow_maintenance_subnet_idx != "all"
+                                and (
+                                    allow_maintenance_subnet_idx
+                                    != (
+                                        cluster_id_outer % len(self.vpc.private_subnets)
+                                    )
+                                )
                                 else []
                             ),
                         ],

@@ -269,18 +269,48 @@ class VirtualPrivateCloud:
                         }
                     ),
                 ),
+                aws.iam.RoleInlinePolicyArgs(
+                    name="ec2",
+                    policy=json.dumps(
+                        {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": ["ec2:*"],
+                                    "Effect": "Allow",
+                                    "Resource": "*",
+                                }
+                            ],
+                        }
+                    ),
+                ),
+                aws.iam.RoleInlinePolicyArgs(
+                    name="IAMPassRoleOfSelf",
+                    policy=json.dumps(
+                        {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": ["iam:PassRole"],
+                                    "Effect": "Allow",
+                                    "Resource": f"arn:aws:iam::*:role/{resource_name}_standard_iam_role-*",
+                                }
+                            ],
+                        }
+                    ),
+                ),
             ],
             tags={
                 "Name": "webapp-iam-role",
             },
         )
-        """The standard iam role with no additional permissions"""
+        """The standard iam role"""
 
         self.standard_instance_profile = aws.iam.InstanceProfile(
             f"{resource_name}_standard_instance_profile",
             role=self.standard_iam_role.name,
         )
-        """The standard instance profile with no additional permissions"""
+        """The standard instance profile"""
 
         self.bastion: aws.ec2.Instance = aws.ec2.Instance(
             f"{resource_name}-bastion",
