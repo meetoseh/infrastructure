@@ -238,6 +238,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export SLACK_OPS_URL="{ops_url}"',
             f'export ROOT_FRONTEND_URL="https://{domain_no_trailing_dot}"',
             f'export ROOT_BACKEND_URL="https://{domain_no_trailing_dot}"',
+            f'export ROOT_FRONTEND_SSR_URL="https://{domain_no_trailing_dot}"',
             f'export ROOT_WEBSOCKET_URL="wss://{domain_no_trailing_dot}"',
             f'export ROOT_EMAIL_TEMPLATE_URL="https://{domain_no_trailing_dot}"',
             f'export OSEH_S3_BUCKET_NAME="{s3_bucket_name}"',
@@ -347,6 +348,18 @@ frontend = webapp.Webapp(
     bleeding_ami=True,
     webapp_counter=webapp_counter,
 )
+frontend_ssr = webapp.Webapp(
+    "frontend-ssr",
+    main_vpc,
+    "meetoseh/frontend-ssr-web",
+    github_username,
+    github_pat,
+    main_vpc.bastion.public_ip,
+    key,
+    instance_type="t4g.small",
+    bleeding_ami=True,  # required for node 18
+    webapp_counter=webapp_counter,
+)
 high_resource_jobs = webapp.Webapp(
     "high_resource_jobs",
     main_vpc,
@@ -392,6 +405,7 @@ main_reverse_proxy = reverse_proxy.ReverseProxy(
     backend_ws,
     backend_email_templates,
     frontend,
+    frontend_ssr,
 )
 tls = TransportLayerSecurity(
     "tls",
@@ -476,6 +490,7 @@ backend_rest.perform_remote_executions(standard_configuration)
 backend_ws.perform_remote_executions(standard_configuration)
 backend_email_templates.perform_remote_executions(standard_configuration)
 frontend.perform_remote_executions(standard_configuration)
+frontend_ssr.perform_remote_executions(standard_configuration)
 high_resource_jobs.perform_remote_executions(high_resource_config)
 low_resource_jobs.perform_remote_executions(low_resource_config)
 
@@ -494,6 +509,9 @@ pulumi.export(
     "example reverse proxy ip", main_reverse_proxy.reverse_proxies[0].private_ip
 )
 pulumi.export("example frontend-web ip", frontend.instances_by_subnet[0][0].private_ip)
+pulumi.export(
+    "example frontend-ssr-web ip", frontend_ssr.instances_by_subnet[0][0].private_ip
+)
 pulumi.export("example backend ip", backend_rest.instances_by_subnet[0][0].private_ip)
 pulumi.export("example websocket ip", backend_ws.instances_by_subnet[0][0].private_ip)
 pulumi.export(

@@ -23,6 +23,7 @@ class ReverseProxy:
         ws_backend: Webapp,
         email_template_backend: Webapp,
         frontend: Webapp,
+        frontend_ssr: Webapp,
     ) -> None:
         """Creates a reverse proxy in the first 2 public subnets of
         the virtual private cloud
@@ -38,7 +39,9 @@ class ReverseProxy:
                 backend
             email_template_backend (Webapp): The webapp responsible for
                 generating emails from a template name and props
-            frontend (Webapp): The webapp responsible for the frontend
+            frontend (Webapp): The webapp responsible for the SPA frontend
+            frontend_ssr (Webapp): The webapp responsible for the frontend
+                server side rendered pages (e.g, the shared class page)
         """
         self.resource_name: str = resource_name
         """The prefix for the names of resoruces created by this instance"""
@@ -57,6 +60,10 @@ class ReverseProxy:
 
         self.frontend: Webapp = frontend
         """The application for frontend requests"""
+
+        self.frontend_ssr: Webapp = frontend_ssr
+        """The application for frontend requests that require server side
+        rendering"""
 
         self.reverse_proxy_security_group: aws.ec2.SecurityGroup = (
             aws.ec2.SecurityGroup(
@@ -126,6 +133,9 @@ class ReverseProxy:
                             ),
                             "FRONTEND_UPSTREAM": get_upstreams(
                                 self.frontend, disable_fail_time=True
+                            ),
+                            "FRONTEND_SSR_UPSTREAM": get_upstreams(
+                                self.frontend_ssr, disable_fail_time=True
                             ),
                         }
                     },
