@@ -393,7 +393,7 @@ backend_email_templates = webapp.Webapp(
     github_pat,
     main_vpc.bastion.public_ip,
     key,
-    webapp_counter=webapp_counter,
+    webapp_counter=webapp_counter + 1,
     instance_type="t4g.small",  # node requires 1.2gb ram to build :/
     bleeding_ami=True,  # required for node 18
 )
