@@ -88,6 +88,7 @@ oseh_expo_notification_access_token = config.require_secret(
 oseh_email_template_jwt_secret = config.require_secret("oseh_email_template_jwt_secret")
 oseh_siwo_jwt_secret = config.require_secret("oseh_siwo_jwt_secret")
 oseh_merge_jwt_secret = config.require_secret("oseh_merge_jwt_secret")
+oseh_transcript_jwt_secret = config.require_secret("oseh_transcript_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -221,6 +222,7 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_build_security_group_id: str = remaining[54]
     oseh_build_iam_instance_profile_name: str = remaining[55]
     oseh_merge_jwt_secret: str = remaining[56]
+    oseh_transcript_jwt_secret: str = remaining[57]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -294,6 +296,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_BUILD_SECURITY_GROUP_ID="{oseh_build_security_group_id}"',
             f'export OSEH_BUILD_IAM_INSTANCE_PROFILE_NAME="{oseh_build_iam_instance_profile_name}"',
             f'export OSEH_MERGE_JWT_SECRET="{oseh_merge_jwt_secret}"',
+            f'export OSEH_TRANSCRIPT_JWT_SECRET="{oseh_transcript_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -478,6 +481,7 @@ standard_configuration = pulumi.Output.all(
     frontend.security_group.id,
     main_vpc.standard_instance_profile.name,
     oseh_merge_jwt_secret,
+    oseh_transcript_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration

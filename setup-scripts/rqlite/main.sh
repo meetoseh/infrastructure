@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 install_rqlite() {
     local latest_release_url=$(curl -L -s --retry 5 --retry-connrefused https://api.github.com/repos/rqlite/rqlite/releases/latest | jq -r ".assets[] | .browser_download_url" | grep -Eo "^.*rqlite-.*-linux-arm64.tar.gz")
+    echo "installing rqlite from $latest_release_url" | tee -a /home/ec2-user/rqlite_warnings
     local fname=$(basename $latest_release_url)
     local foldername=$(basename $fname .tar.gz)
     local install_bin="/usr/bin"
@@ -38,7 +39,7 @@ start_rqlite_cluster() {
     do
         sleep 1
     done
-    echo rqlited stopped
+    echo "rqlited stopped"
 
     # if we don't change directory it will slow screen -r
     bash -c "cd /home/ec2-user && screen -dmS rqlited /home/ec2-user/start_rqlited.sh"

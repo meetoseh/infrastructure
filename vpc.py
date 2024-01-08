@@ -102,11 +102,11 @@ class VirtualPrivateCloud:
         self.nat_ami = aws.ec2.get_ami(
             most_recent=True,
             filters=[
-                aws.ec2.GetAmiFilterArgs(name="name", values=["amzn-ami-vpc-nat-*"]),
+                aws.ec2.GetAmiFilterArgs(name="name", values=["fck-nat-amzn2-*"]),
                 aws.ec2.GetAmiFilterArgs(name="virtualization-type", values=["hvm"]),
-                aws.ec2.GetAmiFilterArgs(name="architecture", values=["x86_64"]),
+                aws.ec2.GetAmiFilterArgs(name="architecture", values=["arm64"]),
             ],
-            owners=["137112412989"],
+            owners=["568608671756"],
         )
         """The Amazon Machine Id for the NAT gateways"""
 
@@ -130,7 +130,7 @@ class VirtualPrivateCloud:
         self.nats: List[aws.ec2.Instance] = [
             aws.ec2.Instance(
                 f"{resource_name}-nat-{idx}",
-                instance_type="t3a.nano",
+                instance_type="t4g.nano",
                 ami=self.nat_ami.id,
                 vpc_security_group_ids=[self.nat_security_group.id],
                 subnet_id=public_subnet.id,
