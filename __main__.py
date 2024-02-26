@@ -89,6 +89,7 @@ oseh_email_template_jwt_secret = config.require_secret("oseh_email_template_jwt_
 oseh_siwo_jwt_secret = config.require_secret("oseh_siwo_jwt_secret")
 oseh_merge_jwt_secret = config.require_secret("oseh_merge_jwt_secret")
 oseh_transcript_jwt_secret = config.require_secret("oseh_transcript_jwt_secret")
+oseh_progress_jwt_secret = config.require_secret("oseh_progress_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -223,6 +224,7 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_build_iam_instance_profile_name: str = remaining[55]
     oseh_merge_jwt_secret: str = remaining[56]
     oseh_transcript_jwt_secret: str = remaining[57]
+    oseh_progress_jwt_secret: str = remaining[58]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -297,6 +299,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_BUILD_IAM_INSTANCE_PROFILE_NAME="{oseh_build_iam_instance_profile_name}"',
             f'export OSEH_MERGE_JWT_SECRET="{oseh_merge_jwt_secret}"',
             f'export OSEH_TRANSCRIPT_JWT_SECRET="{oseh_transcript_jwt_secret}"',
+            f'export OSEH_PROGRESS_JWT_SECRET="{oseh_progress_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -338,6 +341,7 @@ backend_ws = webapp.Webapp(
     main_vpc.bastion.public_ip,
     key,
     webapp_counter=webapp_counter,
+    bleeding_ami=True,  # python version 3.9+
 )
 frontend = webapp.Webapp(
     "frontend",
@@ -375,6 +379,7 @@ high_resource_jobs = webapp.Webapp(
     num_instances_per_subnet=1,
     instance_type="m6g.large",  # needs at least 3 GiB memory; c7g.2xlarge does a ~2m video in 47m
     bleeding_ami=True,  # required for pympanim
+    volume_size=128,  # video processing requires a lot of space
 )
 low_resource_jobs = webapp.Webapp(
     "low_resource_jobs",
@@ -482,6 +487,7 @@ standard_configuration = pulumi.Output.all(
     main_vpc.standard_instance_profile.name,
     oseh_merge_jwt_secret,
     oseh_transcript_jwt_secret,
+    oseh_progress_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration

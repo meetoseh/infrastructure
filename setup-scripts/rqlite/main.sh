@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 install_rqlite() {
+    # tested version: v8.18.5
+    # known issues on <= v8.18.5
     local latest_release_url=$(curl -L -s --retry 5 --retry-connrefused https://api.github.com/repos/rqlite/rqlite/releases/latest | jq -r ".assets[] | .browser_download_url" | grep -Eo "^.*rqlite-.*-linux-arm64.tar.gz")
     echo "installing rqlite from $latest_release_url" | tee -a /home/ec2-user/rqlite_warnings
     local fname=$(basename $latest_release_url)
@@ -31,7 +33,7 @@ start_rqlite_cluster() {
 
     echo "#!/usr/bin/env bash" > /home/ec2-user/start_rqlited.sh
 
-    echo "rqlited -fk=true -node-id $NODE_ID -http-addr $MY_IP:4001 -raft-addr $MY_IP:4002 -bootstrap-expect $NUM_NODES -join $JOIN_ADDRESS -join-attempts 1000 /home/ec2-user/rqlite-data 2>&1 | tee -a /home/ec2-user/rqlite.log" >> /home/ec2-user/start_rqlited.sh
+    echo "rqlited -fk=true -raft-log-level=INFO -node-id $NODE_ID -http-addr $MY_IP:4001 -raft-addr $MY_IP:4002 -bootstrap-expect $NUM_NODES -join $JOIN_ADDRESS -join-attempts 1000 /home/ec2-user/rqlite-data 2>&1 | tee -a /home/ec2-user/rqlite.log" >> /home/ec2-user/start_rqlited.sh
     chmod +x /home/ec2-user/start_rqlited.sh
 
     echo Waiting for rqlited to stop...
