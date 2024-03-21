@@ -55,6 +55,10 @@ refresh_token_secret = config.require_secret("refresh_token_secret")
 course_jwt_secret = config.require_secret("course_jwt_secret")
 revenue_cat_secret_key = config.require_secret("revenue_cat_secret_key")
 revenue_cat_stripe_public_key = config.require_secret("revenue_cat_stripe_public_key")
+revenue_cat_google_play_public_key = config.require_secret(
+    "revenue_cat_google_play_public_key"
+)
+revenue_cat_apple_public_key = config.require_secret("revenue_cat_apple_public_key")
 stripe_secret_key = config.require_secret("stripe_secret_key")
 stripe_public_key = config.require_secret("stripe_public_key")
 stripe_price_id = config.require("stripe_price_id")
@@ -90,6 +94,8 @@ oseh_siwo_jwt_secret = config.require_secret("oseh_siwo_jwt_secret")
 oseh_merge_jwt_secret = config.require_secret("oseh_merge_jwt_secret")
 oseh_transcript_jwt_secret = config.require_secret("oseh_transcript_jwt_secret")
 oseh_progress_jwt_secret = config.require_secret("oseh_progress_jwt_secret")
+revenue_cat_v2_secret_key = config.require_secret("revenue_cat_v2_secret_key")
+oseh_gender_api_key = config.require_secret("oseh_gender_api_key")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -225,6 +231,10 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_merge_jwt_secret: str = remaining[56]
     oseh_transcript_jwt_secret: str = remaining[57]
     oseh_progress_jwt_secret: str = remaining[58]
+    revenue_cat_v2_secret_key: str = remaining[59]
+    revenue_cat_google_play_public_key: str = remaining[60]
+    revenue_cat_apple_public_key: str = remaining[61]
+    oseh_gender_api_key: str = remaining[62]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -254,7 +264,10 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_INTERACTIVE_PROMPT_JWT_SECRET="{interactive_prompt_jwt_secret}"',
             f'export OSEH_SIWO_JWT_SECRET="{oseh_siwo_jwt_secret}"',
             f'export OSEH_REVENUE_CAT_SECRET_KEY="{revenue_cat_secret_key}"',
+            f'export OSEH_REVENUE_CAT_V2_SECRET_KEY="{revenue_cat_v2_secret_key}"',
             f'export OSEH_REVENUE_CAT_STRIPE_PUBLIC_KEY="{revenue_cat_stripe_public_key}"',
+            f'export OSEH_REVENUE_CAT_GOOGLE_PLAY_PUBLIC_KEY="{revenue_cat_google_play_public_key}"',
+            f'export OSEH_REVENUE_CAT_APPLE_PUBLIC_KEY="{revenue_cat_apple_public_key}"',
             f'export OSEH_STRIPE_SECRET_KEY="{stripe_secret_key}"',
             f'export OSEH_STRIPE_PUBLIC_KEY="{stripe_public_key}"',
             f'export OSEH_STRIPE_PRICE_ID="{stripe_price_id}"',
@@ -300,6 +313,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_MERGE_JWT_SECRET="{oseh_merge_jwt_secret}"',
             f'export OSEH_TRANSCRIPT_JWT_SECRET="{oseh_transcript_jwt_secret}"',
             f'export OSEH_PROGRESS_JWT_SECRET="{oseh_progress_jwt_secret}"',
+            f'export OSEH_GENDER_API_KEY="{oseh_gender_api_key}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -488,6 +502,10 @@ standard_configuration = pulumi.Output.all(
     oseh_merge_jwt_secret,
     oseh_transcript_jwt_secret,
     oseh_progress_jwt_secret,
+    revenue_cat_v2_secret_key,
+    revenue_cat_google_play_public_key,
+    revenue_cat_apple_public_key,
+    oseh_gender_api_key,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
