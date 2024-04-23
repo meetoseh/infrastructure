@@ -342,6 +342,7 @@ backend_rest = webapp.Webapp(
     main_vpc.bastion.public_ip,
     key,
     webapp_counter=webapp_counter + 1,
+    num_subnets=2,
     bleeding_ami=True,  # python version 3.9+
     instance_type="t4g.small",  # i think it's running out of memory on the nano occassionally
     volume_size=16,  # disk caching for the audio/image files

@@ -8,7 +8,7 @@ wait_internet() {
 install_basic_dependencies() {
     yum update -y
     echo "exclude=python3" >> /etc/yum.conf
-
+    
     if amazon-linux-extras --help >> /dev/null 2&>1
     then
         # amazon linux 2022 has no epel-release yet?
@@ -33,15 +33,15 @@ install_latest_python() {
     rpm --rebuilddb
     bash python_install.sh
     rm python_install.sh
-
+    
     rm /usr/bin/python3
     ln -s /usr/bin/python$latest_version /usr/bin/python3
-
+    
     python3 -m pip install -U pip
 }
 
 verify_iam_profile() {
-    curl http://169.254.169.254/latest/meta-data/iam/info | jq -e .InstanceProfileId
+    curl -s -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 1"
     return $?
 }
 
@@ -52,7 +52,7 @@ wait_iam_profile() {
         ctr=$(($ctr + 1))
         echo "initialization failed to verify iam profile (ctr=$ctr)" >> /home/ec2-user/boot_warnings
         sleep 30
-
+        
         if (($ctr > 5))
         then
             echo "iam profile never arrived, giving up on it" >> /home/ec2-user/boot_warnings

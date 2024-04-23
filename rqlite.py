@@ -1,4 +1,5 @@
 """This module allows creating a rqlite cluster"""
+
 import json
 from typing import List, Optional, Union, Literal
 from remote_executor import RemoteExecution, RemoteExecutionInputs
@@ -88,7 +89,7 @@ class RqliteCluster:
                 f"{resource_name}-instance-{cluster_id}",
                 ami=self.vpc.amazon_linux_bleeding_arm64.id,
                 associate_public_ip_address=False,
-                instance_type="t4g.small",
+                instance_type="t4g.medium",
                 subnet_id=self.vpc.private_subnets[
                     cluster_id % len(self.vpc.private_subnets)
                 ],
