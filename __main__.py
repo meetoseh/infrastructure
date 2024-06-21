@@ -96,6 +96,7 @@ oseh_transcript_jwt_secret = config.require_secret("oseh_transcript_jwt_secret")
 oseh_progress_jwt_secret = config.require_secret("oseh_progress_jwt_secret")
 revenue_cat_v2_secret_key = config.require_secret("revenue_cat_v2_secret_key")
 oseh_gender_api_key = config.require_secret("oseh_gender_api_key")
+oseh_client_screen_jwt_secret = config.require_secret("oseh_client_screen_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -235,6 +236,8 @@ def make_standard_webapp_configuration(args) -> str:
     revenue_cat_google_play_public_key: str = remaining[60]
     revenue_cat_apple_public_key: str = remaining[61]
     oseh_gender_api_key: str = remaining[62]
+    oseh_client_screen_jwt_secret: str = remaining[63]
+    oseh_backup_build_subnet_id: str = remaining[64]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -307,6 +310,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_EXPO_NOTIFICATION_ACCESS_TOKEN="{oseh_expo_notification_access_token}"',
             f'export OSEH_EMAIL_TEMPLATE_JWT_SECRET="{oseh_email_template_jwt_secret}"',
             f'export OSEH_BUILD_SUBNET_ID="{oseh_build_subnet_id}"',
+            f'export OSEH_BACKUP_BUILD_SUBNET_ID="{oseh_backup_build_subnet_id}"',
             f'export OSEH_BUILD_AMI_ID="{oseh_build_ami_id}"',
             f'export OSEH_BUILD_SECURITY_GROUP_ID="{oseh_build_security_group_id}"',
             f'export OSEH_BUILD_IAM_INSTANCE_PROFILE_NAME="{oseh_build_iam_instance_profile_name}"',
@@ -314,6 +318,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_TRANSCRIPT_JWT_SECRET="{oseh_transcript_jwt_secret}"',
             f'export OSEH_PROGRESS_JWT_SECRET="{oseh_progress_jwt_secret}"',
             f'export OSEH_GENDER_API_KEY="{oseh_gender_api_key}"',
+            f'export OSEH_CLIENT_SCREEN_JWT_SECRET="{oseh_client_screen_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -507,6 +512,8 @@ standard_configuration = pulumi.Output.all(
     revenue_cat_google_play_public_key,
     revenue_cat_apple_public_key,
     oseh_gender_api_key,
+    oseh_client_screen_jwt_secret,
+    main_vpc.private_subnets[1].id,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
