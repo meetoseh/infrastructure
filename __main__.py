@@ -98,6 +98,7 @@ revenue_cat_v2_secret_key = config.require_secret("revenue_cat_v2_secret_key")
 oseh_gender_api_key = config.require_secret("oseh_gender_api_key")
 oseh_client_screen_jwt_secret = config.require_secret("oseh_client_screen_jwt_secret")
 oseh_journal_jwt_secret = config.require_secret("oseh_journal_jwt_secret")
+oseh_voice_note_jwt_secret = config.require_secret("oseh_voice_note_jwt_secret")
 
 # it's easy to misuse development_expo_urls, so we make sure it's valid
 for idx, url_str in enumerate(development_expo_urls):
@@ -240,6 +241,7 @@ def make_standard_webapp_configuration(args) -> str:
     oseh_client_screen_jwt_secret: str = remaining[63]
     oseh_backup_build_subnet_id: str = remaining[64]
     oseh_journal_jwt_secret: str = remaining[65]
+    oseh_voice_note_jwt_secret: str = remaining[66]
 
     joined_rqlite_ips = ",".join(rqlite_ips)
     joined_redis_ips = ",".join(redis_ips)
@@ -322,6 +324,7 @@ def make_standard_webapp_configuration(args) -> str:
             f'export OSEH_GENDER_API_KEY="{oseh_gender_api_key}"',
             f'export OSEH_CLIENT_SCREEN_JWT_SECRET="{oseh_client_screen_jwt_secret}"',
             f'export OSEH_JOURNAL_JWT_SECRET="{oseh_journal_jwt_secret}"',
+            f'export OSEH_VOICE_NOTE_JWT_SECRET="{oseh_voice_note_jwt_secret}"',
             f"export ENVIRONMENT=production",
             f"export AWS_DEFAULT_REGION=us-west-2",
         ]
@@ -518,6 +521,7 @@ standard_configuration = pulumi.Output.all(
     oseh_client_screen_jwt_secret,
     main_vpc.private_subnets[1].id,
     oseh_journal_jwt_secret,
+    oseh_voice_note_jwt_secret,
 ).apply(make_standard_webapp_configuration)
 high_resource_config = pulumi.Output.all(standard_configuration).apply(
     make_high_resource_jobs_configuration
