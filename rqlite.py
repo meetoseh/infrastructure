@@ -97,7 +97,7 @@ class RqliteCluster:
                 vpc_security_group_ids=[self.security_group.id],
                 iam_instance_profile=self.vpc.standard_instance_profile.name,
                 root_block_device=aws.ec2.InstanceRootBlockDeviceArgs(
-                    iops=3000, throughput=125, volume_size=8, volume_type="gp3"
+                    iops=3000, throughput=125, volume_size=32, volume_type="gp3"
                 ),
                 tags={
                     "Name": f"{resource_name} {vpc.availability_zones[cluster_id % len(self.vpc.private_subnets)]} [{cluster_id}]",
@@ -106,7 +106,7 @@ class RqliteCluster:
                 opts=pulumi.ResourceOptions(
                     delete_before_replace=True,
                     ignore_changes=(
-                        ["ami", "instance_type", "tags"]
+                        ["ami", "instance_type", "tags", "root_block_device"]
                         if allow_maintenance_subnet_idx != "all"
                         and (
                             allow_maintenance_subnet_idx
