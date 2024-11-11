@@ -12,6 +12,4 @@ pip install -r requirements.txt
 pulumi up
 ```
 
-## Contributing
-
-This project uses [black](https://github.com/psf/black) for linting
+note: costs about $500/month
